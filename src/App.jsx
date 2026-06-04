@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import heroImg from './assets/hero.png'
 import './App.css'
 
@@ -8,6 +9,19 @@ const avatars = [
 ]
 
 function App() {
+  const outerRef = useRef(null)
+  const trackRef = useRef(null)
+
+  useEffect(() => {
+    const outer = outerRef.current
+    const track = trackRef.current
+    if (!outer || !track) return
+    const outerW = outer.offsetWidth
+    const trackW = track.offsetWidth
+    track.style.setProperty('--from', `${outerW}px`)
+    track.style.setProperty('--to', `${-trackW}px`)
+  }, [])
+
   return (
     <div className="min-h-screen bg-white font-sans">
       {/* ── Navbar ── */}
@@ -19,17 +33,22 @@ function App() {
           <span>hello@farmpulse.co.ke</span>
         </div>
 
-        <div className="marquee-wrapper flex-1 mx-6">
-          <div className="marquee-track">
-            <span className="inline-flex items-center gap-1.5 pr-32">
-              <span className="text-green-400 text-[10px] animate-pulse">⚡</span>
-              <span className="text-green-300 font-semibold tracking-widest uppercase text-[11px]">Powered by Weather-AI</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 pr-32">
-              <span className="text-green-400 text-[10px] animate-pulse">⚡</span>
-              <span className="text-green-300 font-semibold tracking-widest uppercase text-[11px]">Powered by Weather-AI</span>
-            </span>
+        <div className="marquee-wrapper flex-1 mx-2 flex items-center">
+          {/* Left exit portal */}
+          <div className="shrink-0 self-stretch w-6 border-r border-green-700/60 bg-gradient-to-r from-[#1a3c2e] to-transparent" />
+
+          {/* Scrolling track */}
+          <div className="marquee-track-outer flex-1 overflow-hidden relative" ref={outerRef}>
+            <div className="marquee-track" ref={trackRef}>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-green-400 text-[10px] animate-pulse">⚡</span>
+                <span className="text-green-300 font-semibold tracking-widest uppercase text-[11px]">Powered by Weather-AI</span>
+              </span>
+            </div>
           </div>
+
+          {/* Right entry portal */}
+          <div className="shrink-0 self-stretch w-6 border-l border-green-700/60 bg-gradient-to-l from-[#1a3c2e] to-transparent" />
         </div>
 
         {/* Right: follow us + icons */}
@@ -116,7 +135,7 @@ function App() {
                   ))}
                 </div>
                 <div className="text-left">
-                  <p className="text-white font-bold text-sm leading-none">200k+</p>
+                  <p className="text-white font-bold text-sm leading-none">20k+</p>
                   <p className="text-gray-400 text-xs">Happy clients</p>
                 </div>
               </div>
