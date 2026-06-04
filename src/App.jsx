@@ -79,61 +79,71 @@ function App() {
       </div>
 
       {/* ── Hero (navbar embedded inside) ── */}
-      <section className="relative h-screen flex flex-col bg-[url('https://images.pexels.com/photos/27135359/pexels-photo-27135359.jpeg')] bg-cover bg-center">
-        {/* dark overlay */}
-        <div className="absolute inset-0 bg-black/55" />
-        {/* left gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
+      <section className="relative h-[95vh] flex flex-col bg-[url('https://images.pexels.com/photos/35428535/pexels-photo-35428535.jpeg')] bg-cover bg-center">
+        {/* very subtle dark tint at bottom for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
 
-        {/* Navbar inside hero */}
-        <nav className="relative z-20 px-10 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-lg text-white">
-            <span className="text-[#a8d66b] text-xl">🌿</span>
-            <span>FarmPulse</span>
-          </div>
-          <ul className="hidden md:flex items-center gap-8 text-sm font-medium">
-            {['Home', 'About Us', 'Services', 'Pages', 'Contact'].map((l, i) => (
-              <li key={l} className={`cursor-pointer transition-colors ${
-                i === 0 ? 'text-[#a8d66b]' : 'text-gray-200 hover:text-[#a8d66b]'
-              }`}>{l}</li>
-            ))}
-          </ul>
-          <button className="bg-[#1a3c2e] hover:bg-[#2d6348] text-white px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2">
-            Contact Now <span className="bg-[#a8d66b] text-[#1a3c2e] rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">→</span>
-          </button>
-        </nav>
-
-        {/* Hero content */}
-        <div className="relative z-10 flex-1 flex items-center px-10">
-          <div className="max-w-lg">
-            {/* badge */}
-            <div className="inline-flex items-center gap-2 border border-[#a8d66b]/60 text-[#a8d66b] rounded-full px-4 py-1 text-xs font-medium mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#a8d66b]" />
-              We are Powering Smart Farms
+        {/* Navbar — floating pill container */}
+        <div className="relative z-20 px-8 pt-5">
+          <nav className="bg-[#1a3c2e]/60 backdrop-blur-md rounded-full px-5 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 font-bold text-base text-white">
+              <span className="bg-[#a8d66b] text-[#1a3c2e] rounded-lg p-1 text-sm">🌿</span>
+              <span>FarmPulse</span>
             </div>
+            <ul className="hidden md:flex items-center gap-1 text-sm font-medium">
+              {['Home', 'About Us', 'Solutions', 'Services', 'Success Story'].map((l, i) => (
+                <li key={l}>
+                  <span className={`px-4 py-1.5 rounded-full cursor-pointer transition-colors block ${
+                    i === 0
+                      ? 'bg-white/20 text-white font-semibold'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}>{l}</span>
+                </li>
+              ))}
+            </ul>
+            <button className="border border-white/60 hover:bg-white/10 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors">
+              Contact Us
+            </button>
+          </nav>
+        </div>
 
-            <h1 className="text-5xl md:text-6xl font-extrabold text-white leading-tight mb-5">
-              Smart Farming<br />and AI Weather
+        {/* Hero content — bottom-left */}
+        <div className="relative z-10 flex-1 flex items-end pb-16 px-12">
+          <div className="max-w-lg">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-4">
+              Smart Farming for<br />Future <em className="font-light italic">Generations</em>
             </h1>
 
-            <p className="text-gray-300 text-sm leading-relaxed mb-8 max-w-sm">
+            <p className="text-white/75 text-sm leading-relaxed mb-8 max-w-sm">
               Monitor all your farms in one unified dashboard. Get real-time weather updates, hyperlocal forecasts, AI-powered crop health insights, and agronomic risk alerts — act before problems strike.
             </p>
 
-            <div className="flex items-center gap-4">
-              <button className="flex items-center gap-2 border border-[#a8d66b] text-white hover:bg-[#a8d66b]/10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
-                <span className="w-6 h-6 rounded-full bg-[#a8d66b] flex items-center justify-center">
-                  <svg className="w-3 h-3 text-[#1a3c2e]" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
-                </span>
-                Discover More
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] px-6 py-2.5 rounded-full text-sm font-bold transition-colors">
+                Book Appointment <span>↗</span>
               </button>
-              <button className="flex items-center gap-2 border border-yellow-400 text-white hover:bg-yellow-400/10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
-                <span className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center">
-                  <svg className="w-3 h-3 text-[#1a3c2e]" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
-                </span>
-                See All Services
+              <button className="flex items-center gap-2 border border-white/50 hover:bg-white/10 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
+                Meet the Team
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="relative z-10 px-12 pb-5 flex items-center justify-between">
+          <span className="text-white/60 text-xs font-medium tracking-widest uppercase flex items-center gap-2">
+            SCROLL <span>↓</span>
+          </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 text-yellow-400 text-sm font-bold">
+              ⭐ <span className="text-white">4.9</span>
+            </div>
+            <div className="flex -space-x-2">
+              {avatars.map((src, i) => (
+                <img key={i} src={src} alt="farmer" className="w-7 h-7 rounded-full border-2 border-white object-cover" />
+              ))}
+            </div>
+            <span className="text-white/80 text-xs font-medium">20k+ Happy Clients</span>
           </div>
         </div>
       </section>
