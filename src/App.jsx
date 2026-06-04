@@ -19,16 +19,13 @@ function App() {
           <span>hello@farmpulse.co.ke</span>
         </div>
 
-        {/* Center: seamless continuous marquee */}
-        <div className="marquee-wrapper flex-1 mx-6 relative">
-          <div className="marquee-track whitespace-nowrap inline-flex items-center">
-            {/* copy 1 */}
-            <span className="inline-flex items-center gap-1.5 pr-24">
+        <div className="marquee-wrapper flex-1 mx-6">
+          <div className="marquee-track">
+            <span className="inline-flex items-center gap-1.5 pr-32">
               <span className="text-green-400 text-[10px] animate-pulse">⚡</span>
               <span className="text-green-300 font-semibold tracking-widest uppercase text-[11px]">Powered by Weather-AI</span>
             </span>
-            {/* copy 2 — ensures no gap when copy 1 exits */}
-            <span className="inline-flex items-center gap-1.5 pr-24">
+            <span className="inline-flex items-center gap-1.5 pr-32">
               <span className="text-green-400 text-[10px] animate-pulse">⚡</span>
               <span className="text-green-300 font-semibold tracking-widest uppercase text-[11px]">Powered by Weather-AI</span>
             </span>

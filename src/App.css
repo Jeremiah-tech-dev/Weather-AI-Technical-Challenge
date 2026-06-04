@@ -1,17 +1,19 @@
 @keyframes marquee {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 
 .marquee-wrapper {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 75%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, black 15%, black 75%, transparent 100%);
   overflow: hidden;
+  position: relative;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
 .marquee-track {
   display: inline-flex;
-  animation: marquee 8s linear infinite;
+  white-space: nowrap;
+  animation: marquee 14s linear infinite;
 }
 
 .marquee-track:hover {
