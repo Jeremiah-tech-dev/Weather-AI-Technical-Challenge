@@ -1,11 +1,4 @@
-@keyframes marquee {
-  0%   { transform: translateX(var(--from)); }
-  100% { transform: translateX(var(--to)); }
-}
-
 .marquee-track-outer {
-  overflow: hidden;
-  width: 100%;
   position: relative;
 }
 
@@ -13,5 +6,4 @@
   display: inline-block;
   white-space: nowrap;
   will-change: transform;
-  animation: marquee 12s linear infinite;
 }
