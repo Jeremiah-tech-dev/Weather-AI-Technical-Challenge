@@ -3,6 +3,9 @@ import './App.css'
 import { getSession } from './store/farmStore'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
+import FarmDetail from './pages/FarmDetail'
+import TreeAnalysis from './pages/TreeAnalysis'
+import AlertFeed from './pages/AlertFeed'
 
 const avatars = [
   'https://randomuser.me/api/portraits/women/44.jpg',
@@ -50,13 +53,31 @@ function App() {
   const close = () => setActiveModal(null)
 
   // ── Routing state ──────────────────────────────────────────────────────
-  const [page, setPage] = useState(() => getSession() ? 'dashboard' : 'landing')
+  const [page,    setPage]    = useState(() => getSession() ? 'dashboard' : 'landing')
+  const [pageCtx, setPageCtx] = useState(null)   // farm or farms array
+  const [budgetWarning, setBudgetWarning] = useState(null)
+
+  function navigate(pageName, ctx = null) {
+    setPage(pageName.toLowerCase().replace(' ', '-'))
+    setPageCtx(ctx)
+  }
 
   if (page === 'auth') {
     return <AuthPage onAuth={() => setPage('dashboard')} />
   }
   if (page === 'dashboard') {
-    return <Dashboard onLogout={() => setPage('landing')} />
+    return <Dashboard onLogout={() => setPage('landing')} onNavigate={navigate} />
+  }
+  if (page === 'farm-detail') {
+    return <FarmDetail farm={pageCtx} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
+  }
+  if (page === 'tree-analysis') {
+    const farm = Array.isArray(pageCtx) ? pageCtx[0] : pageCtx
+    return <TreeAnalysis farm={farm} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
+  }
+  if (page === 'alert-feed') {
+    const farms = Array.isArray(pageCtx) ? pageCtx : (pageCtx ? [pageCtx] : [])
+    return <AlertFeed farms={farms} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
   }
   // else: fall through to landing page below
 
