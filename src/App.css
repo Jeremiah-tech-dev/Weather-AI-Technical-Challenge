@@ -7,3 +7,39 @@
   white-space: nowrap;
   will-change: transform;
 }
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes dropDown {
+  from { transform: translateY(-60px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes riseUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-slide-left {
+  animation: slideInLeft 0.4s ease-out;
+}
+
+.modal-drop-down {
+  animation: dropDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-scale-up {
+  animation: scaleUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-rise-up {
+  animation: riseUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

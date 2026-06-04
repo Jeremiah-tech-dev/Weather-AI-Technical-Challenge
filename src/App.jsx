@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const avatars = [
@@ -43,8 +43,133 @@ function Marquee({ children }) {
 }
 
 function App() {
+  const [activeModal, setActiveModal] = useState(null)
+  const close = () => setActiveModal(null)
+
   return (
     <div className="min-h-screen bg-white font-sans">
+
+      {/* ── ABOUT US — slides from left ── */}
+      {activeModal === 'About Us' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-start" onClick={close}>
+          <div
+            className="modal-slide-left relative h-full w-full max-w-md bg-[#1a3c2e] text-white p-10 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={close} className="absolute top-5 right-5 text-white/50 hover:text-white text-xl">✕</button>
+            <div className="mt-8">
+              <span className="text-[#a8d66b] text-xs font-bold tracking-widest uppercase">About FarmPulse</span>
+              <h2 className="text-3xl font-extrabold mt-2 mb-4 leading-tight">Built for the Modern Agronomist</h2>
+              <p className="text-white/70 text-sm leading-relaxed mb-6">
+                FarmPulse is an AI-powered farm intelligence platform designed for agronomists managing multiple sites across diverse climates worldwide. We unify real-time weather, crop health, and risk data into one seamless dashboard.
+              </p>
+              <p className="text-white/70 text-sm leading-relaxed mb-8">
+                Founded by a team of agronomists and engineers, our mission is simple: give farmers the power to act before problems strike. From hyperlocal forecasts to drone-based canopy analysis, FarmPulse is your farm's smartest tool.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {[['500+', 'Farms Monitored'], ['20k+', 'Happy Clients'], ['98%', 'Uptime'], ['7-Day', 'Forecasts']].map(([val, lbl]) => (
+                  <div key={lbl} className="bg-white/10 rounded-2xl p-4">
+                    <p className="text-[#a8d66b] text-2xl font-extrabold">{val}</p>
+                    <p className="text-white/60 text-xs mt-1">{lbl}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SOLUTIONS — drops from top ── */}
+      {activeModal === 'Solutions' && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24" onClick={close}>
+          <div
+            className="modal-drop-down relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 p-8"
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={close} className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            <span className="text-[#1a3c2e] text-xs font-bold tracking-widest uppercase">Our Solutions</span>
+            <h2 className="text-2xl font-extrabold text-gray-900 mt-1 mb-6">What FarmPulse Solves</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { icon: '🌦️', title: 'Hyperlocal Weather', desc: 'Real-time and 7-day forecasts pinned to each farm location.' },
+                { icon: '🤖', title: 'AI Crop Insights', desc: 'Machine learning models that predict crop stress before it shows.' },
+                { icon: '🛸', title: 'Drone Analysis', desc: 'Canopy health scoring and tree count from aerial imagery.' },
+                { icon: '⚠️', title: 'Risk Alerts', desc: 'Agronomic risk flags delivered instantly so you act first.' },
+              ].map(s => (
+                <div key={s.title} className="flex gap-3 bg-green-50 rounded-2xl p-4">
+                  <span className="text-2xl">{s.icon}</span>
+                  <div>
+                    <p className="font-bold text-gray-800 text-sm">{s.title}</p>
+                    <p className="text-gray-500 text-xs mt-1 leading-snug">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SERVICES — scale up from center ── */}
+      {activeModal === 'Services' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={close}>
+          <div
+            className="modal-scale-up relative bg-[#0f2419] text-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 p-8"
+            onClick={e => e.stopPropagation()}
+          >
+            <button onClick={close} className="absolute top-5 right-5 text-white/40 hover:text-white text-xl">✕</button>
+            <span className="text-[#a8d66b] text-xs font-bold tracking-widest uppercase">Services</span>
+            <h2 className="text-2xl font-extrabold mt-1 mb-6">Everything Your Farm Needs</h2>
+            <div className="space-y-3">
+              {[
+                { icon: '📡', title: 'Live Weather Monitoring', desc: 'Temp, humidity, wind & UV per farm in real time.' },
+                { icon: '📊', title: 'Farm Dashboard', desc: 'Unified view of all your farms with visual charts and KPIs.' },
+                { icon: '🌳', title: 'Tree & Crop Health', desc: 'AI-driven analysis of canopy cover and crop vitality.' },
+                { icon: '🔔', title: 'Smart Risk Alerts', desc: 'Push alerts for frost, drought, pests and disease risk.' },
+              ].map(s => (
+                <div key={s.title} className="flex items-center gap-4 bg-white/8 border border-white/10 rounded-2xl px-4 py-3">
+                  <span className="text-2xl w-10 shrink-0 text-center">{s.icon}</span>
+                  <div>
+                    <p className="font-semibold text-sm">{s.title}</p>
+                    <p className="text-white/50 text-xs mt-0.5">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUCCESS STORY — rises from bottom ── */}
+      {activeModal === 'Success Story' && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={close}>
+          <div
+            className="modal-rise-up relative bg-white rounded-t-3xl shadow-2xl w-full max-w-2xl p-8 pb-10"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-6" />
+            <button onClick={close} className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            <span className="text-[#1a3c2e] text-xs font-bold tracking-widest uppercase">Success Stories</span>
+            <h2 className="text-2xl font-extrabold text-gray-900 mt-1 mb-6">What Our Farmers Say</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                { name: 'Jane Muthoni', role: 'Maize Farmer, Nakuru', quote: 'FarmPulse warned me 3 days early about a frost risk. I covered my crops and saved my entire harvest. I cannot imagine farming without it now.', avatar: 'https://randomuser.me/api/portraits/women/44.jpg' },
+                { name: 'David Otieno', role: 'Agronomist, Kisumu', quote: 'Managing 12 farms used to be a nightmare. Now I get a single view of everything — weather, crop health, alerts. My clients trust me more.', avatar: 'https://randomuser.me/api/portraits/men/32.jpg' },
+                { name: 'Amina Waweru', role: 'Horticulture Farmer, Meru', quote: 'The AI risk alerts helped me identify early blight before it spread. I cut pesticide use by 40% and my yields went up. Incredible tool.', avatar: 'https://randomuser.me/api/portraits/women/68.jpg' },
+              ].map(s => (
+                <div key={s.name} className="flex gap-4 bg-green-50 border border-green-100 rounded-2xl p-4">
+                  <img src={s.avatar} alt={s.name} className="w-12 h-12 rounded-full object-cover shrink-0 border-2 border-[#a8d66b]" />
+                  <div>
+                    <p className="text-gray-700 text-sm italic leading-snug mb-2">"{s.quote}"</p>
+                    <p className="text-[#1a3c2e] font-bold text-xs">{s.name}</p>
+                    <p className="text-gray-400 text-xs">{s.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Top bar ── */}
       <div className="bg-[#1a3c2e] text-gray-300 px-6 py-2 flex items-center justify-between text-xs overflow-hidden">
         <div className="flex items-center gap-1 shrink-0">
@@ -93,16 +218,18 @@ function App() {
             <ul className="hidden md:flex items-center gap-1 text-sm font-medium">
               {['Home', 'About Us', 'Solutions', 'Services', 'Success Story'].map((l, i) => (
                 <li key={l}>
-                  <span className={`px-4 py-1.5 rounded-full cursor-pointer transition-colors block ${
-                    i === 0
-                      ? 'bg-white/20 text-white font-semibold'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}>{l}</span>
+                  <span
+                    onClick={() => l === 'Home' ? close() : setActiveModal(l)}
+                    className={`px-4 py-1.5 rounded-full cursor-pointer transition-colors block ${
+                      i === 0
+                        ? 'bg-white/20 text-white font-semibold'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                    }`}>{l}</span>
                 </li>
               ))}
             </ul>
-            <button className="border border-white/60 hover:bg-white/10 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors">
-              Contact Us
+            <button className="bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-5 py-2 rounded-full text-sm transition-colors">
+              Register Account
             </button>
           </nav>
         </div>
@@ -120,10 +247,10 @@ function App() {
 
             <div className="flex items-center gap-3">
               <button className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] px-6 py-2.5 rounded-full text-sm font-bold transition-colors">
-                Book Appointment <span>↗</span>
+                Register Account <span>↗</span>
               </button>
-              <button className="flex items-center gap-2 border border-white/50 hover:bg-white/10 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
-                Meet the Team
+              <button onClick={() => setActiveModal('Success Story')} className="flex items-center gap-2 border border-white/50 hover:bg-white/10 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
+                🌟 Farmer Stories
               </button>
             </div>
           </div>
