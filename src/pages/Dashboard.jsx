@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget, consumeApiCall } from '../store/farmStore'
-import { getCurrentWeather, mockCurrentWeather, isMockMode, BudgetError } from '../services/weatherApi'
+import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget } from '../store/farmStore'
+import { getCurrentWeather, BudgetError, NetworkError } from '../services/weatherApi'
 import AddFarmModal from '../components/AddFarmModal'
 
-// ── Risk helpers ───────────────────────────────────────────────────────
 const RISK = {
-  safe:  { label:'Safe',    classes:'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', dot:'bg-emerald-400', glow:'#10b981' },
-  watch: { label:'Watch',   classes:'bg-amber-500/20 text-amber-300 border-amber-500/30',      dot:'bg-amber-400',   glow:'#f59e0b' },
-  act:   { label:'Act Now', classes:'bg-red-500/20 text-red-300 border-red-500/30',            dot:'bg-red-400',     glow:'#ef4444' },
+  safe:  { label: 'Safe',     classes: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', dot: 'bg-emerald-400', glow: '#10b981' },
+  watch: { label: 'Watch',    classes: 'bg-amber-500/20 text-amber-300 border-amber-500/30',      dot: 'bg-amber-400',   glow: '#f59e0b' },
+  act:   { label: 'Act Now',  classes: 'bg-red-500/20 text-red-300 border-red-500/30',            dot: 'bg-red-400',     glow: '#ef4444' },
 }
+
 function riskLevel(w) {
   if (!w) return 'safe'
   const t = w.temperature ?? 20
@@ -16,9 +16,13 @@ function riskLevel(w) {
   if (t < 12 || t > 32) return 'watch'
   return 'safe'
 }
-const CONDITION_ICON = { 'Sunny':'☀️','Partly Cloudy':'⛅','Light Rain':'🌦️','Overcast':'☁️','Heavy Rain':'🌧️','Thunderstorm':'⛈️','Foggy':'🌫️','Clear':'🌙' }
 
-function AnimatedNumber({ value, suffix='' }) {
+const CONDITION_ICON = {
+  'Sunny': '☀️', 'Partly Cloudy': '⛅', 'Light Rain': '🌦️', 'Overcast': '☁️',
+  'Heavy Rain': '🌧️', 'Thunderstorm': '⛈️', 'Foggy': '🌫️', 'Clear': '🌙',
+}
+
+function AnimatedNumber({ value, suffix = '' }) {
   const [display, setDisplay] = useState(0)
   useEffect(() => {
     let n = 0; const inc = value / 30
@@ -44,7 +48,7 @@ function ApiUsageBar({ used, limit }) {
       <p className="text-white text-sm font-bold mb-2">{used} <span className="text-white/40 font-normal">of {limit} calls used</span></p>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700"
-          style={{ width:`${pct}%`, background:color, boxShadow:`0 0 8px ${color}80` }} />
+          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
       </div>
       <div className="flex justify-between mt-2">
         <span className="text-white/40 text-[10px]">{limit - used} remaining</span>
@@ -63,16 +67,16 @@ function FarmCard({ farm, index, onClick }) {
     <div onClick={onClick}
       className="relative group rounded-3xl overflow-hidden cursor-pointer border border-white/10 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
       style={{
-        background:'linear-gradient(145deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%)',
-        backdropFilter:'blur(12px)',
-        animationDelay:`${index*120}ms`,
-        animation:'fadeSlideUp 0.6s ease-out both',
-        boxShadow:'0 4px 24px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.08)',
+        background: 'linear-gradient(145deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%)',
+        backdropFilter: 'blur(12px)',
+        animationDelay: `${index * 120}ms`,
+        animation: 'fadeSlideUp 0.6s ease-out both',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.08)',
       }}>
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl"
-        style={{ background:`radial-gradient(ellipse at top left,${badge.glow}15,transparent 60%)` }} />
+        style={{ background: `radial-gradient(ellipse at top left,${badge.glow}15,transparent 60%)` }} />
       <div className="absolute top-0 left-6 right-6 h-px"
-        style={{ background:`linear-gradient(90deg,transparent,${badge.glow}80,transparent)` }} />
+        style={{ background: `linear-gradient(90deg,transparent,${badge.glow}80,transparent)` }} />
       <div className="relative p-6">
         <div className="flex items-start justify-between mb-5">
           <div className="flex-1 min-w-0 pr-3">
@@ -84,7 +88,11 @@ function FarmCard({ farm, index, onClick }) {
             {badge.label}
           </span>
         </div>
-        {w ? (
+        {farm.error ? (
+          <div className="flex items-center gap-2 text-red-400/70 text-xs mt-2">
+            <span>⚠️</span> {farm.error}
+          </div>
+        ) : w ? (
           <div className="flex items-end justify-between">
             <div>
               <p className="text-5xl font-black text-white leading-none">
@@ -115,13 +123,18 @@ function FarmCard({ farm, index, onClick }) {
   )
 }
 
-function BudgetBanner({ reason, onDismiss }) {
+function Toast({ message, type, onDismiss }) {
+  const isBudget = type === 'budget'
   return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-950 border border-red-500/40 rounded-2xl px-5 py-3.5 shadow-2xl"
-      style={{ animation:'dropDown 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
-      <span className="text-red-400 text-lg">⛔</span>
-      <p className="text-red-200 text-sm font-semibold">{reason}</p>
-      <button onClick={onDismiss} className="text-red-400/60 hover:text-red-300 ml-2 text-lg">✕</button>
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-2xl max-w-md"
+      style={{
+        background: isBudget ? '#450a0a' : '#1c1917',
+        border: `1px solid ${isBudget ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'}`,
+        animation: 'dropDown 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+      }}>
+      <span className="text-lg shrink-0">{isBudget ? '⛔' : '📡'}</span>
+      <p className="text-red-200 text-sm font-semibold">{message}</p>
+      <button onClick={onDismiss} className="text-red-400/60 hover:text-red-300 ml-2 text-lg leading-none shrink-0">✕</button>
     </div>
   )
 }
@@ -139,35 +152,28 @@ function StatChip({ icon, label, value }) {
 }
 
 export default function Dashboard({ onLogout, onNavigate }) {
-  const user  = getCurrentUser()
-  const [farms,         setFarms]         = useState(getFarms)
-  const [showModal,     setShowModal]     = useState(false)
-  const [budgetWarning, setBudgetWarning] = useState(null)
-  const [apiUsed,       setApiUsed]       = useState(user?.apiCallsUsed ?? 0)
+  const user     = getCurrentUser()
+  const [farms,      setFarms]      = useState(getFarms)
+  const [showModal,  setShowModal]  = useState(false)
+  const [toast,      setToast]      = useState(null)   // { message, type }
+  const [apiUsed,    setApiUsed]    = useState(user?.apiCallsUsed ?? 0)
   const apiLimit = user?.apiCallsLimit ?? 100
+
+  function showToast(message, type = 'network') {
+    setToast({ message, type })
+  }
 
   async function fetchWeather(farm) {
     const { allowed, reason } = checkBudget()
-    if (!allowed) { setBudgetWarning(reason); return null }
+    if (!allowed) { showToast(reason, 'budget'); return null }
     try {
-      let data
-      if (isMockMode()) {
-        consumeApiCall()
-        await new Promise(r => setTimeout(r, 800 + Math.random() * 600))
-        data = mockCurrentWeather()
-      } else {
-        try {
-          data = await getCurrentWeather(farm.lat, farm.lng)
-        } catch {
-          // real API failed — fall back to mock so UI stays functional
-          consumeApiCall()
-          data = mockCurrentWeather()
-        }
-      }
+      const data = await getCurrentWeather(farm.lat, farm.lng)
       setApiUsed(getCurrentUser()?.apiCallsUsed ?? 0)
       return data
     } catch (e) {
-      if (e instanceof BudgetError) setBudgetWarning(e.message)
+      if (e instanceof BudgetError) showToast(e.message, 'budget')
+      else if (e instanceof NetworkError) showToast(e.message, 'network')
+      else showToast('Network error — could not fetch weather.', 'network')
       return null
     }
   }
@@ -177,15 +183,19 @@ export default function Dashboard({ onLogout, onNavigate }) {
     setFarms([...updated])
     setShowModal(false)
     fetchWeather(farm).then(weather => {
-      if (weather) setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, weather } : f))
+      setFarms(prev => prev.map(f =>
+        f.id === farm.id ? { ...f, weather: weather ?? undefined, error: weather ? undefined : 'Network error' } : f
+      ))
     })
   }
 
   useEffect(() => {
     farms.forEach(farm => {
-      if (!farm.weather) {
+      if (!farm.weather && !farm.error) {
         fetchWeather(farm).then(weather => {
-          if (weather) setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, weather } : f))
+          setFarms(prev => prev.map(f =>
+            f.id === farm.id ? { ...f, weather: weather ?? undefined, error: weather ? undefined : 'Network error' } : f
+          ))
         })
       }
     })
@@ -194,15 +204,14 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const safeCount  = farms.filter(f => riskLevel(f.weather) === 'safe').length
   const watchCount = farms.filter(f => riskLevel(f.weather) === 'watch').length
   const actCount   = farms.filter(f => riskLevel(f.weather) === 'act').length
-
-  const NAV_PAGES = ['Dashboard','Farm Detail','Tree Analysis','Alert Feed']
+  const NAV_PAGES  = ['Dashboard', 'Farm Detail', 'Tree Analysis', 'Alert Feed']
 
   return (
-    <div className="min-h-screen text-white" style={{ background:'linear-gradient(160deg,#071510 0%,#0d2318 40%,#071510 100%)' }}>
-      {budgetWarning && <BudgetBanner reason={budgetWarning} onDismiss={() => setBudgetWarning(null)} />}
+    <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg,#071510 0%,#0d2318 40%,#071510 100%)' }}>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
 
       <nav className="sticky top-0 z-40 border-b border-white/8"
-        style={{ background:'rgba(7,21,16,0.85)', backdropFilter:'blur(16px)' }}>
+        style={{ background: 'rgba(7,21,16,0.85)', backdropFilter: 'blur(16px)' }}>
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2 font-black text-lg">
             <span className="bg-[#a8d66b] text-[#1a3c2e] rounded-xl p-1.5 text-sm">🌿</span>
@@ -212,9 +221,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
             {NAV_PAGES.map(p => (
               <button key={p} onClick={() => p !== 'Dashboard' && onNavigate(p, farms)}
                 className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-                  p === 'Dashboard'
-                    ? 'text-[#a8d66b] font-semibold bg-[#a8d66b]/10'
-                    : 'text-white/40 hover:text-white hover:bg-white/8'
+                  p === 'Dashboard' ? 'text-[#a8d66b] font-semibold bg-[#a8d66b]/10' : 'text-white/40 hover:text-white hover:bg-white/8'
                 }`}>{p}</button>
             ))}
           </div>
@@ -234,7 +241,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8" style={{ animation:'fadeSlideUp 0.5s ease-out' }}>
+        <div className="mb-8" style={{ animation: 'fadeSlideUp 0.5s ease-out' }}>
           <p className="text-[#a8d66b] text-xs font-bold tracking-widest uppercase mb-1">
             {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}
           </p>
@@ -242,12 +249,12 @@ export default function Dashboard({ onLogout, onNavigate }) {
             {user?.name?.split(' ')[0]}'s <span className="text-white/40">Farm Overview</span>
           </h1>
           <p className="text-white/40 text-sm mt-1">
-            {new Date().toLocaleDateString('en-KE', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+            {new Date().toLocaleDateString('en-KE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
 
         {farms.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8" style={{ animation:'fadeSlideUp 0.5s ease-out 0.1s both' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8" style={{ animation: 'fadeSlideUp 0.5s ease-out 0.1s both' }}>
             <StatChip icon="🌾" label="Total farms" value={farms.length} />
             <StatChip icon="✅" label="Safe"         value={safeCount} />
             <StatChip icon="⚠️" label="Watch"        value={watchCount} />
@@ -256,7 +263,6 @@ export default function Dashboard({ onLogout, onNavigate }) {
         )}
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Farms grid */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-5">
               <p className="text-white/60 text-sm font-semibold uppercase tracking-widest">Farms · {farms.length}</p>
@@ -268,11 +274,11 @@ export default function Dashboard({ onLogout, onNavigate }) {
 
             {farms.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-white/10 rounded-3xl"
-                style={{ animation:'fadeSlideUp 0.6s ease-out 0.2s both' }}>
+                style={{ animation: 'fadeSlideUp 0.6s ease-out 0.2s both' }}>
                 <div className="relative mb-6">
                   <div className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
-                    style={{ background:'radial-gradient(circle,rgba(168,214,107,0.15),transparent)' }}>🌱</div>
-                  <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background:'#a8d66b' }} />
+                    style={{ background: 'radial-gradient(circle,rgba(168,214,107,0.15),transparent)' }}>🌱</div>
+                  <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background: '#a8d66b' }} />
                 </div>
                 <h2 className="text-xl font-extrabold text-white mb-2">No farms yet</h2>
                 <p className="text-white/40 text-sm mb-8 max-w-xs leading-relaxed">Add your first farm to start monitoring live weather, crop health, and risk alerts.</p>
@@ -284,24 +290,20 @@ export default function Dashboard({ onLogout, onNavigate }) {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {farms.map((farm, i) => (
-                  <FarmCard key={farm.id} farm={farm} index={i}
-                    onClick={() => onNavigate('Farm Detail', farm)} />
+                  <FarmCard key={farm.id} farm={farm} index={i} onClick={() => onNavigate('Farm Detail', farm)} />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:w-72 shrink-0 space-y-4" style={{ animation:'fadeSlideUp 0.5s ease-out 0.2s both' }}>
+          <div className="lg:w-72 shrink-0 space-y-4" style={{ animation: 'fadeSlideUp 0.5s ease-out 0.2s both' }}>
             <ApiUsageBar used={apiUsed} limit={apiLimit} />
-
-            {/* Quick nav to other pages */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Quick Access</p>
               {[
-                { icon:'📊', label:'Farm Detail',    desc:'7-day forecast & hourly' },
-                { icon:'🌳', label:'Tree Analysis',  desc:'Drone canopy health' },
-                { icon:'⚠️', label:'Alert Feed',     desc:'AI agronomic risk flags' },
+                { icon: '📊', label: 'Farm Detail',   desc: '7-day forecast & hourly' },
+                { icon: '🌳', label: 'Tree Analysis', desc: 'Drone canopy health' },
+                { icon: '⚠️', label: 'Alert Feed',    desc: 'AI agronomic risk flags' },
               ].map(({ icon, label, desc }) => (
                 <button key={label} onClick={() => onNavigate(label, farms)}
                   className="w-full flex items-center gap-3 text-left mb-2 last:mb-0 hover:bg-white/8 rounded-xl px-2 py-2 transition-colors group">
@@ -313,12 +315,11 @@ export default function Dashboard({ onLogout, onNavigate }) {
                 </button>
               ))}
             </div>
-
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Risk Guide</p>
-              {[{color:'#10b981',label:'Safe',desc:'Conditions normal'},{color:'#f59e0b',label:'Watch',desc:'Monitor closely'},{color:'#ef4444',label:'Act Now',desc:'Immediate action needed'}].map(({ color, label, desc }) => (
+              {[{ color: '#10b981', label: 'Safe', desc: 'Conditions normal' }, { color: '#f59e0b', label: 'Watch', desc: 'Monitor closely' }, { color: '#ef4444', label: 'Act Now', desc: 'Immediate action needed' }].map(({ color, label, desc }) => (
                 <div key={label} className="flex items-center gap-3 mb-2.5 last:mb-0">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background:color }} />
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
                   <div>
                     <p className="text-white text-xs font-semibold">{label}</p>
                     <p className="text-white/30 text-[10px]">{desc}</p>
@@ -326,10 +327,9 @@ export default function Dashboard({ onLogout, onNavigate }) {
                 </div>
               ))}
             </div>
-
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Security</p>
-              {['🔒 Passwords hashed with bcrypt','🧠 Session in memory only','💰 Budget enforced before every call'].map(s => (
+              {['🔒 Passwords hashed with bcrypt', '🧠 Session in memory only', '💰 Budget enforced before every call'].map(s => (
                 <p key={s} className="text-white/40 text-[10px] mb-1.5 last:mb-0">{s}</p>
               ))}
             </div>

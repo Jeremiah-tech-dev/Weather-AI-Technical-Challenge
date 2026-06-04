@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { getDailyForecast, getHourlyForecast, mockDailyForecast, mockHourlyForecast, isMockMode, BudgetError } from '../services/weatherApi'
-import { checkBudget, consumeApiCall } from '../store/farmStore'
+import { getDailyForecast, getHourlyForecast, BudgetError, NetworkError } from '../services/weatherApi'
 
-const CONDITION_ICON = { 'Sunny':'☀️','Partly Cloudy':'⛅','Rain':'🌧️','Clear':'🌙','Cloudy':'☁️','Light Rain':'🌦️','Thunderstorm':'⛈️','Foggy':'🌫️' }
+const CONDITION_ICON = { 'Sunny': '☀️', 'Partly Cloudy': '⛅', 'Rain': '🌧️', 'Clear': '🌙', 'Cloudy': '☁️', 'Light Rain': '🌦️', 'Thunderstorm': '⛈️', 'Foggy': '🌫️' }
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -17,59 +16,54 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+function ErrorState({ message, onRetry }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+      <span className="text-5xl">📡</span>
+      <p className="text-white font-bold text-lg">Could not load forecast</p>
+      <p className="text-white/40 text-sm max-w-xs">{message}</p>
+      <button onClick={onRetry}
+        className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
+        Retry
+      </button>
+    </div>
+  )
+}
+
 export default function FarmDetail({ farm, onBack, onBudgetError }) {
-  const [daily,   setDaily]   = useState(null)
-  const [hourly,  setHourly]  = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [activeHourTab, setActiveHourTab] = useState('temp')
+  const [daily,          setDaily]         = useState(null)
+  const [hourly,         setHourly]        = useState(null)
+  const [loading,        setLoading]       = useState(true)
+  const [error,          setError]         = useState(null)
+  const [activeHourTab,  setActiveHourTab] = useState('temp')
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        if (isMockMode()) {
-          await new Promise(r => setTimeout(r, 700))
-          const b1 = checkBudget(); if (!b1.allowed) { onBudgetError(b1.reason); return }
-          consumeApiCall()
-          const b2 = checkBudget(); if (!b2.allowed) { onBudgetError(b2.reason); return }
-          consumeApiCall()
-          setDaily(mockDailyForecast())
-          setHourly(mockHourlyForecast())
-        } else {
-          try {
-            const [d, h] = await Promise.all([
-              getDailyForecast(farm.lat, farm.lng),
-              getHourlyForecast(farm.lat, farm.lng),
-            ])
-            setDaily(d)
-            setHourly(h)
-          } catch {
-            // real API unavailable — fall back to mock
-            const b1 = checkBudget(); if (b1.allowed) consumeApiCall()
-            const b2 = checkBudget(); if (b2.allowed) consumeApiCall()
-            setDaily(mockDailyForecast())
-            setHourly(mockHourlyForecast())
-          }
-        }
-      } catch (e) {
-        if (e instanceof BudgetError) onBudgetError(e.message)
-      } finally {
-        setLoading(false)
-      }
+  async function load() {
+    setLoading(true)
+    setError(null)
+    try {
+      const [d, h] = await Promise.all([
+        getDailyForecast(farm.lat, farm.lng),
+        getHourlyForecast(farm.lat, farm.lng),
+      ])
+      setDaily(d)
+      setHourly(h)
+    } catch (e) {
+      if (e instanceof BudgetError) { onBudgetError(e.message); return }
+      setError(e instanceof NetworkError ? e.message : 'Network error — check your connection and try again.')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [farm.id]) // eslint-disable-line
+  }
 
-  const hourlyDisplay = hourly?.filter((_, i) => i % 2 === 0) // every 2hrs for readability
+  useEffect(() => { load() }, [farm.id]) // eslint-disable-line
+
+  const hourlyDisplay = hourly?.filter((_, i) => i % 2 === 0)
 
   return (
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg, #071510 0%, #0d2318 40%, #071510 100%)' }}>
-      {/* Header */}
       <div className="sticky top-0 z-40 border-b border-white/8" style={{ background: 'rgba(7,21,16,0.9)', backdropFilter: 'blur(16px)' }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
-          <button onClick={onBack} className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">
-            ← Back
-          </button>
+          <button onClick={onBack} className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">← Back</button>
           <div className="h-4 w-px bg-white/20" />
           <div>
             <p className="font-extrabold text-white">{farm.name}</p>
@@ -79,7 +73,6 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
       </div>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8" style={{ animation: 'fadeSlideUp 0.5s ease-out' }}>
-
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <svg className="w-8 h-8 animate-spin text-[#a8d66b]" fill="none" viewBox="0 0 24 24">
@@ -88,9 +81,11 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
             </svg>
             <p className="text-white/40 text-sm">Fetching forecast data…</p>
           </div>
+        ) : error ? (
+          <ErrorState message={error} onRetry={load} />
         ) : (
           <>
-            {/* ── 7-Day Forecast Bar Chart ── */}
+            {/* 7-Day Forecast */}
             <section className="bg-white/5 border border-white/10 rounded-3xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -99,7 +94,6 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
                 </div>
                 <span className="text-2xl">📅</span>
               </div>
-
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={daily} barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -107,13 +101,11 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
                   <YAxis yAxisId="rain" orientation="right" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" />
                   <YAxis yAxisId="temp" orientation="left"  tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} unit="°" />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar yAxisId="rain" dataKey="rain_probability" name="Rain %" fill="#5b5ea6" radius={[4,4,0,0]} opacity={0.85} />
+                  <Bar yAxisId="rain" dataKey="rain_probability" name="Rain %"    fill="#5b5ea6" radius={[4,4,0,0]} opacity={0.85} />
                   <Bar yAxisId="temp" dataKey="high"             name="High Temp" fill="#a8d66b" radius={[4,4,0,0]} opacity={0.9} />
                   <Bar yAxisId="temp" dataKey="low"              name="Low Temp"  fill="#1a3c2e" radius={[4,4,0,0]} opacity={0.9} />
                 </BarChart>
               </ResponsiveContainer>
-
-              {/* Day cards */}
               <div className="grid grid-cols-7 gap-2 mt-4">
                 {daily?.map(d => (
                   <div key={d.day} className="flex flex-col items-center gap-1 bg-white/5 rounded-xl p-2">
@@ -127,7 +119,7 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
               </div>
             </section>
 
-            {/* ── Hourly Breakdown ── */}
+            {/* Hourly Breakdown */}
             <section className="bg-white/5 border border-white/10 rounded-3xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -135,7 +127,7 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
                   <p className="text-white font-extrabold text-lg">Today's hour-by-hour</p>
                 </div>
                 <div className="flex gap-2">
-                  {['temp','rain'].map(t => (
+                  {['temp', 'rain'].map(t => (
                     <button key={t} onClick={() => setActiveHourTab(t)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeHourTab === t ? 'bg-[#a8d66b] text-[#1a3c2e]' : 'bg-white/10 text-white/50 hover:text-white'}`}>
                       {t === 'temp' ? '🌡️ Temp' : '💧 Rain'}
@@ -143,7 +135,6 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
                   ))}
                 </div>
               </div>
-
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={hourlyDisplay}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -152,15 +143,13 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
                     unit={activeHourTab === 'temp' ? '°' : '%'} />
                   <Tooltip content={<CustomTooltip />} />
                   {activeHourTab === 'temp'
-                    ? <Line type="monotone" dataKey="temperature" name="Temp" stroke="#a8d66b" strokeWidth={2} dot={false} />
+                    ? <Line type="monotone" dataKey="temperature"      name="Temp"   stroke="#a8d66b" strokeWidth={2} dot={false} />
                     : <Line type="monotone" dataKey="rain_probability" name="Rain %" stroke="#5b8dd9" strokeWidth={2} dot={false} />
                   }
                 </LineChart>
               </ResponsiveContainer>
-
-              {/* Highlight: next rain window */}
               {hourly && (() => {
-                const rainHour = hourly.find(h => h.rain_probability > 50)
+                const rainHour = hourly.find(h => (h.rain_probability ?? 0) > 50)
                 return rainHour ? (
                   <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
                     <span className="text-2xl">🌧️</span>
