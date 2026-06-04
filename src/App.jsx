@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { getUser } from './store/farmStore'
-import RegisterPage from './pages/RegisterPage'
+import { getSession } from './store/farmStore'
+import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
 
 const avatars = [
@@ -50,10 +50,10 @@ function App() {
   const close = () => setActiveModal(null)
 
   // ── Routing state ──────────────────────────────────────────────────────
-  const [page, setPage] = useState(() => getUser() ? 'dashboard' : 'landing')
+  const [page, setPage] = useState(() => getSession() ? 'dashboard' : 'landing')
 
-  if (page === 'register') {
-    return <RegisterPage onRegistered={() => setPage('dashboard')} />
+  if (page === 'auth') {
+    return <AuthPage onAuth={() => setPage('dashboard')} />
   }
   if (page === 'dashboard') {
     return <Dashboard onLogout={() => setPage('landing')} />
@@ -242,7 +242,7 @@ function App() {
                 </li>
               ))}
             </ul>
-            <button onClick={() => setPage('register')} className="bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-5 py-2 rounded-full text-sm transition-colors">
+            <button onClick={() => setPage('auth')} className="bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-5 py-2 rounded-full text-sm transition-colors">
               Register Account
             </button>
           </nav>
@@ -260,7 +260,7 @@ function App() {
             </p>
 
             <div className="flex items-center gap-3">
-              <button onClick={() => setPage('register')} className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] px-6 py-2.5 rounded-full text-sm font-bold transition-colors">
+              <button onClick={() => setPage('auth')} className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] px-6 py-2.5 rounded-full text-sm font-bold transition-colors">
                 Register Account <span>↗</span>
               </button>
               <button onClick={() => setActiveModal('Success Story')} className="flex items-center gap-2 border border-white/50 hover:bg-white/10 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-colors">
