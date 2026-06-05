@@ -59,7 +59,6 @@ function ApiUsageSidebar({ used, limit }) {
 }
 
 export default function AlertFeed({ farms, onBack, onBudgetError }) {
-  const user   = getCurrentUser()
   const [alerts,   setAlerts]   = useState([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)

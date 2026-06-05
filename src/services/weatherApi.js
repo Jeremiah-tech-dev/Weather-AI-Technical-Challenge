@@ -47,12 +47,13 @@ async function call(path, options = {}) {
 export function normaliseCurrentWeather(raw) {
   const c = raw?.current ?? raw
   return {
-    temperature: c.temperature  ?? c.temp      ?? c.temp_c    ?? null,
-    condition:   c.condition    ?? c.condition_code ?? c.description ?? c.weather ?? '',
-    humidity:    c.humidity     ?? raw?.hourly?.[0]?.humidity  ?? null,
-    wind_speed:  c.wind_speed   ?? c.wind_kph  ?? null,
-    uv_index:    c.uv_index     ?? raw?.hourly?.[0]?.uv_index  ?? null,
-    feels_like:  c.feels_like   ?? raw?.hourly?.[0]?.feels_like ?? null,
+    temperature:    c.temperature  ?? c.temp      ?? c.temp_c    ?? null,
+    condition:      c.condition    ?? c.description ?? c.weather ?? '',
+    condition_code: c.condition_code ?? c.weathercode ?? c.weather_code ?? null,
+    humidity:       c.humidity     ?? raw?.hourly?.[0]?.humidity  ?? null,
+    wind_speed:     c.wind_speed   ?? c.wind_kph  ?? null,
+    uv_index:       c.uv_index     ?? raw?.hourly?.[0]?.uv_index  ?? null,
+    feels_like:     c.feels_like   ?? raw?.hourly?.[0]?.feels_like ?? null,
   }
 }
 
@@ -99,23 +100,34 @@ export function normaliseUsage(raw) {
 }
 
 // ── Public API ─────────────────────────────────────────────────────────
+function validCoords(lat, lng) {
+  const la = parseFloat(lat), ln = parseFloat(lng)
+  if (isNaN(la) || isNaN(ln) || la < -90 || la > 90 || ln < -180 || ln > 180)
+    throw new NetworkError('Invalid coordinates.')
+  return [la, ln]
+}
+
 export async function getCurrentWeather(lat, lng) {
-  const raw = await call(`/v1/current?lat=${lat}&lon=${lng}`)
+  const [la, ln] = validCoords(lat, lng)
+  const raw = await call(`/v1/current?lat=${la}&lon=${ln}`)
   return normaliseCurrentWeather(raw)
 }
 
 export async function getWeatherGeo(lat, lng) {
-  const raw = await call(`/v1/weather-geo?lat=${lat}&lon=${lng}`)
+  const [la, ln] = validCoords(lat, lng)
+  const raw = await call(`/v1/weather-geo?lat=${la}&lon=${ln}`)
   return normaliseCurrentWeather(raw)
 }
 
 export async function getDailyForecast(lat, lng) {
-  const raw = await call(`/v1/daily?lat=${lat}&lon=${lng}`)
+  const [la, ln] = validCoords(lat, lng)
+  const raw = await call(`/v1/daily?lat=${la}&lon=${ln}`)
   return normaliseDailyForecast(raw)
 }
 
 export async function getHourlyForecast(lat, lng) {
-  const raw = await call(`/v1/hourly?lat=${lat}&lon=${lng}`)
+  const [la, ln] = validCoords(lat, lng)
+  const raw = await call(`/v1/hourly?lat=${la}&lon=${ln}`)
   return normaliseHourlyForecast(raw)
 }
 

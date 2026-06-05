@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
 import FarmDetail from './pages/FarmDetail'
 import AlertFeed from './pages/AlertFeed'
+import SplashScreen from './components/SplashScreen'
 
 const avatars = [
   'https://randomuser.me/api/portraits/women/44.jpg',
@@ -52,7 +53,7 @@ function App() {
   const close = () => setActiveModal(null)
 
   // ── Routing state ──────────────────────────────────────────────────────
-  const [page,    setPage]    = useState(() => getSession() ? 'dashboard' : 'landing')
+  const [page,    setPage]    = useState(() => getSession() ? 'dashboard' : 'splash')
   const [pageCtx, setPageCtx] = useState(null)   // farm or farms array
   const [budgetWarning, setBudgetWarning] = useState(null)
 
@@ -61,8 +62,11 @@ function App() {
     setPageCtx(ctx)
   }
 
+  if (page === 'splash') {
+    return <SplashScreen onDone={() => setPage('landing')} />
+  }
   if (page === 'auth') {
-    return <AuthPage onAuth={() => setPage('dashboard')} />
+    return <AuthPage onAuth={() => setPage('dashboard')} onBack={() => setPage('landing')} />
   }
   if (page === 'dashboard') {
     return <Dashboard onLogout={() => setPage('landing')} onNavigate={navigate} />
@@ -234,7 +238,7 @@ function App() {
       </div>
 
       {/* ── Hero (navbar embedded inside) ── */}
-      <section className="relative h-[95vh] flex flex-col bg-[url('https://images.pexels.com/photos/35428535/pexels-photo-35428535.jpeg')] bg-cover bg-center">
+      <section className="relative h-[95vh] flex flex-col bg-[url('https://images.pexels.com/photos/533982/pexels-photo-533982.jpeg')] bg-cover bg-center">
         {/* very subtle dark tint at bottom for text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
 

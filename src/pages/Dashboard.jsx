@@ -9,13 +9,25 @@ const RISK = {
   act:   { label: 'Act Now',  classes: 'bg-red-500/20 text-red-300 border-red-500/30',            dot: 'bg-red-400',     glow: '#ef4444' },
 }
 
-// Risk derived from real API condition_code
 // WMO codes: 0-1 clear, 2-3 cloudy, 51-67 rain/drizzle, 71-77 snow, 80-82 showers, 95-99 thunderstorm
+const ACT_KEYWORDS   = ['thunderstorm', 'heavy rain', 'storm']
+const WATCH_KEYWORDS = ['rain', 'drizzle', 'snow', 'shower', 'fog', 'overcast']
+
 function riskLevel(w) {
   if (!w) return 'safe'
-  const code = parseInt(w.condition_code ?? w.condition ?? 0)
-  if (code >= 95 || code >= 80) return 'act'   // thunderstorm or heavy showers
-  if (code >= 51 || code >= 71) return 'watch' // drizzle, rain, snow
+  // prefer numeric WMO code when available
+  if (w.condition_code != null) {
+    const code = parseInt(w.condition_code)
+    if (!isNaN(code)) {
+      if (code >= 95 || code >= 80) return 'act'
+      if (code >= 51 || code >= 71) return 'watch'
+      return 'safe'
+    }
+  }
+  // fall back to condition string matching
+  const c = (w.condition ?? '').toLowerCase()
+  if (ACT_KEYWORDS.some(k => c.includes(k)))   return 'act'
+  if (WATCH_KEYWORDS.some(k => c.includes(k))) return 'watch'
   return 'safe'
 }
 
@@ -187,7 +199,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
     setShowModal(false)
     fetchWeather(farm).then(weather => {
       setFarms(prev => prev.map(f =>
-        f.id === farm.id ? { ...f, weather: weather ?? undefined, error: weather ? undefined : 'Network error' } : f
+        f.id === farm.id ? { ...f, weather: weather ?? null, error: weather ? null : 'Network error' } : f
       ))
     })
   }
@@ -207,15 +219,33 @@ export default function Dashboard({ onLogout, onNavigate }) {
       setFarms(prev => prev.map(f => {
         const r = results.find(r => r.id === f.id)
         if (!r) return f
-        return { ...f, weather: r.weather ?? undefined, error: r.weather ? undefined : 'Network error' }
+        return { ...f, weather: r.weather ?? null, error: r.weather ? null : 'Network error' }
       }))
     })
+  }, []) // eslint-disable-line
+
+  // Refresh all farm weather every 5 minutes
+  useEffect(() => {
+    const id = setInterval(() => {
+      const current = getFarms()
+      if (!current.length) return
+      Promise.all(
+        current.map(farm => fetchWeather(farm).then(weather => ({ id: farm.id, weather })))
+      ).then(results => {
+        setFarms(prev => prev.map(f => {
+          const r = results.find(r => r.id === f.id)
+          if (!r) return f
+          return { ...f, weather: r.weather ?? null, error: r.weather ? null : 'Network error' }
+        }))
+      })
+    }, 5 * 60 * 1000)
+    return () => clearInterval(id)
   }, []) // eslint-disable-line
 
   const safeCount  = farms.filter(f => riskLevel(f.weather) === 'safe').length
   const watchCount = farms.filter(f => riskLevel(f.weather) === 'watch').length
   const actCount   = farms.filter(f => riskLevel(f.weather) === 'act').length
-  const NAV_PAGES  = ['Dashboard', 'Alert Feed']
+  const NAV_PAGES = ['Dashboard', 'Alert Feed']
 
   return (
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg,#071510 0%,#0d2318 40%,#071510 100%)' }}>
