@@ -93,9 +93,12 @@ export function normaliseInsights(raw) {
 
 export function normaliseUsage(raw) {
   return {
-    used:  raw?.period?.requestCount ?? raw?.used  ?? raw?.apiCallsUsed  ?? raw?.calls_used  ?? 0,
-    limit: raw?.limits?.requests     ?? raw?.limit ?? raw?.apiCallsLimit ?? raw?.calls_limit ?? 1000,
-    remaining: raw?.remaining?.requests ?? null,
+    used:          raw?.period?.requestCount   ?? raw?.used  ?? raw?.apiCallsUsed  ?? raw?.calls_used  ?? 0,
+    limit:         raw?.limits?.requests        ?? raw?.limit ?? raw?.apiCallsLimit ?? raw?.calls_limit ?? 1000,
+    remaining:     raw?.remaining?.requests     ?? null,
+    aiUsed:        raw?.period?.aiRequestCount  ?? null,
+    aiLimit:       raw?.limits?.aiRequests      ?? null,
+    aiRemaining:   raw?.remaining?.aiRequests   ?? null,
   }
 }
 

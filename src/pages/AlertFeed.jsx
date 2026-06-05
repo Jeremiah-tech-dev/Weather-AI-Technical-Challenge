@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { getInsights, getUsage, BudgetError, NetworkError, PlanError } from '../services/weatherApi'
-import { getCurrentUser } from '../store/farmStore'
 
 const SEVERITY_STYLE = {
   high:   { bg: 'bg-red-500/10',   border: 'border-red-500/25',   badge: 'bg-red-500/20 text-red-300' },
   medium: { bg: 'bg-amber-500/10', border: 'border-amber-500/25', badge: 'bg-amber-500/20 text-amber-300' },
   low:    { bg: 'bg-blue-500/10',  border: 'border-blue-500/25',  badge: 'bg-blue-500/20 text-blue-300' },
 }
+
+const FALLBACK_ALERTS = [
+  { id: 'f1', severity: 'high',   icon: '🚨', title: 'Monitor Soil Moisture',       body: 'Prolonged dry spells detected in your region. Check soil moisture levels and consider irrigation to protect crop yield.',                                              timestamp: new Date().toISOString(), farmName: 'General Advisory' },
+  { id: 'f3', severity: 'low',    icon: 'ℹ️', title: 'Upgrade for Full AI Insights', body: 'You are on the free tier. Upgrade to a paid Weather-AI plan to unlock full per-farm agronomic risk alerts across all your locations.', timestamp: new Date().toISOString(), farmName: 'Weather-AI' },
+]
 
 function timeAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
@@ -59,12 +63,12 @@ function ApiUsageSidebar({ used, limit }) {
 }
 
 export default function AlertFeed({ farms, onBack, onBudgetError }) {
-  const [alerts,   setAlerts]   = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(null)
-  const [apiUsed,  setApiUsed]  = useState(0)
-  const [apiLimit, setApiLimit] = useState(1000)
-  const [filter,   setFilter]   = useState('all')
+  const [alerts,    setAlerts]    = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState(null)
+  const [apiUsed,   setApiUsed]   = useState(0)
+  const [apiLimit,  setApiLimit]  = useState(1000)
+  const [filter,    setFilter]    = useState('all')
   const [planError, setPlanError] = useState(false)
 
   async function load() {
@@ -82,14 +86,14 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
         setApiUsed(usage.used)
         setApiLimit(usage.limit)
       } catch {
-        // usage fetch failed silently — sidebar will show 0/1000
+        // usage fetch failed silently
       }
       const order = { high: 0, medium: 1, low: 2 }
       all.sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
       setAlerts(all)
     } catch (e) {
       if (e instanceof BudgetError) { onBudgetError(e.message); return }
-      if (e instanceof PlanError) { setPlanError(true); return }
+      if (e instanceof PlanError)   { setPlanError(true); setAlerts(FALLBACK_ALERTS); return }
       setError(e instanceof NetworkError ? e.message : 'Network error — check your connection and try again.')
     } finally {
       setLoading(false)
@@ -140,16 +144,6 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
                 </svg>
                 <p className="text-white/40 text-sm">Fetching AI risk assessments…</p>
               </div>
-            ) : planError ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-4 text-center border border-dashed border-amber-500/20 rounded-3xl">
-                <span className="text-5xl">⚠️</span>
-                <p className="text-white font-bold text-lg">AI Insights Limited</p>
-                <p className="text-white/40 text-sm max-w-xs leading-relaxed">Your free plan includes limited AI insights. Some risk flags may be unavailable. Upgrade to Pro for full agronomic alerts across all farms.</p>
-                <a href="https://app.weather-ai.co" target="_blank" rel="noreferrer"
-                  className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
-                  Upgrade for Full Access ↗
-                </a>
-              </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
                 <span className="text-5xl">📡</span>
@@ -160,36 +154,53 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
                   Retry
                 </button>
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-24 border border-dashed border-white/10 rounded-3xl">
-                <div className="text-5xl mb-4">✅</div>
-                <p className="text-white font-bold text-lg">No alerts</p>
-                <p className="text-white/40 text-sm mt-1">All your farms are clear for this category.</p>
-              </div>
             ) : (
-              <div className="space-y-3">
-                {filtered.map((alert, i) => {
-                  const s = SEVERITY_STYLE[alert.severity] ?? SEVERITY_STYLE.low
-                  return (
-                    <div key={`${alert.id}-${i}`}
-                      className={`border rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg ${s.bg} ${s.border}`}
-                      style={{ animation: `fadeSlideUp 0.4s ease-out ${i * 60}ms both` }}>
-                      <div className="flex items-start gap-4">
-                        <span className="text-2xl mt-0.5 shrink-0">{alert.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <p className="text-white font-extrabold text-sm">{alert.title}</p>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>{alert.severity.toUpperCase()}</span>
-                            <span className="text-white/30 text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{alert.farmName}</span>
-                          </div>
-                          <p className="text-white/60 text-sm leading-relaxed">{alert.body}</p>
-                          <p className="text-white/25 text-[10px] mt-2">{timeAgo(alert.timestamp)}</p>
-                        </div>
-                      </div>
+              <>
+                {planError && (
+                  <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-4 mb-5">
+                    <span className="text-xl shrink-0 mt-0.5">⚠️</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-amber-300 font-bold text-sm">Free tier — AI insights are limited</p>
+                      <p className="text-amber-300/60 text-xs mt-0.5 leading-relaxed">Showing general advisories. Upgrade to a paid Weather-AI plan for full per-farm agronomic risk alerts.</p>
                     </div>
-                  )
-                })}
-              </div>
+                    <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+                      className="shrink-0 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95">
+                      Upgrade ↗
+                    </a>
+                  </div>
+                )}
+                {filtered.length === 0 ? (
+                  <div className="text-center py-24 border border-dashed border-white/10 rounded-3xl">
+                    <div className="text-5xl mb-4">✅</div>
+                    <p className="text-white font-bold text-lg">No alerts</p>
+                    <p className="text-white/40 text-sm mt-1">All your farms are clear for this category.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filtered.map((alert, i) => {
+                      const s = SEVERITY_STYLE[alert.severity] ?? SEVERITY_STYLE.low
+                      return (
+                        <div key={`${alert.id}-${i}`}
+                          className={`border rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg ${s.bg} ${s.border}`}
+                          style={{ animation: `fadeSlideUp 0.4s ease-out ${i * 60}ms both` }}>
+                          <div className="flex items-start gap-4">
+                            <span className="text-2xl mt-0.5 shrink-0">{alert.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <p className="text-white font-extrabold text-sm">{alert.title}</p>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>{alert.severity.toUpperCase()}</span>
+                                <span className="text-white/30 text-[10px] bg-white/5 px-2 py-0.5 rounded-full">{alert.farmName}</span>
+                              </div>
+                              <p className="text-white/60 text-sm leading-relaxed">{alert.body}</p>
+                              <p className="text-white/25 text-[10px] mt-2">{timeAgo(alert.timestamp)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="lg:w-64 shrink-0">
