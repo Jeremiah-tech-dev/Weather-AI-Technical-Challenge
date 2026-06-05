@@ -3,6 +3,13 @@ import { checkBudget, consumeApiCall } from '../store/farmStore'
 const IS_PROD = import.meta.env.PROD
 const API_KEY  = import.meta.env.VITE_WEATHERAI_KEY
 
+// ── Request queue — ensures only one call goes to Weather-AI at a time ──
+let _queue = Promise.resolve()
+function enqueue(fn) {
+  _queue = _queue.then(() => new Promise(resolve => setTimeout(resolve, 300))).then(fn)
+  return _queue
+}
+
 // In production, route through the Vercel proxy to avoid CORS.
 // In development, call the Weather-AI API directly.
 function buildUrl(path) {
@@ -30,7 +37,7 @@ export class PlanError extends Error {
   constructor(msg) { super(msg); this.isPlan = true }
 }
 
-async function call(path, options = {}) {
+async function _call(path, options = {}) {
   const { allowed, reason } = checkBudget()
   if (!allowed) throw new BudgetError(reason)
 
@@ -59,6 +66,10 @@ async function call(path, options = {}) {
 
   consumeApiCall()
   return res.json()
+}
+
+function call(path, options = {}) {
+  return enqueue(() => _call(path, options))
 }
 
 // ── Normalise helpers ──────────────────────────────────────────────────
