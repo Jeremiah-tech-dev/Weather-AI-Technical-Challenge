@@ -39,22 +39,23 @@ function ErrorState({ message, onRetry, isPlan }) {
 }
 
 export default function FarmDetail({ farm, onBack, onBudgetError }) {
-  const [daily,          setDaily]         = useState(null)
-  const [hourly,         setHourly]        = useState(null)
-  const [loading,        setLoading]       = useState(true)
-  const [error,          setError]         = useState(null)
-  const [isPlanError,    setIsPlanError]    = useState(false)
-  const [activeHourTab,  setActiveHourTab] = useState('temp')
+  const [daily,         setDaily]        = useState(null)
+  const [hourly,        setHourly]       = useState(null)
+  const [loading,       setLoading]      = useState(true)
+  const [hourlyLoading, setHourlyLoading] = useState(false)
+  const [hourlyError,   setHourlyError]  = useState(null)
+  const [error,         setError]        = useState(null)
+  const [isPlanError,   setIsPlanError]  = useState(false)
+  const [activeHourTab, setActiveHourTab] = useState('temp')
 
-  async function load() {
+  // Load only daily on mount — one call, no collision
+  async function loadDaily() {
     setLoading(true)
     setError(null)
     setIsPlanError(false)
     try {
       const d = await getDailyForecast(farm.lat, farm.lng)
-      const h = await getHourlyForecast(farm.lat, farm.lng)
       setDaily(d)
-      setHourly(h)
     } catch (e) {
       if (e instanceof BudgetError) { onBudgetError(e.message); return }
       if (e instanceof PlanError)   { setIsPlanError(true); setError(e.message); return }
@@ -64,7 +65,22 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
     }
   }
 
-  useEffect(() => { load() }, [farm.id]) // eslint-disable-line
+  // Load hourly only when user explicitly requests it
+  async function loadHourly() {
+    setHourlyLoading(true)
+    setHourlyError(null)
+    try {
+      const h = await getHourlyForecast(farm.lat, farm.lng)
+      setHourly(h)
+    } catch (e) {
+      if (e instanceof BudgetError) { onBudgetError(e.message); return }
+      setHourlyError(e instanceof NetworkError ? e.message : 'Could not load hourly data.')
+    } finally {
+      setHourlyLoading(false)
+    }
+  }
+
+  useEffect(() => { loadDaily() }, [farm.id]) // eslint-disable-line
 
   const hourlyDisplay = hourly?.filter((_, i) => i % 2 === 0)
 
@@ -91,7 +107,7 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
             <p className="text-white/40 text-sm">Fetching forecast data…</p>
           </div>
         ) : error ? (
-          <ErrorState message={error} onRetry={load} isPlan={isPlanError} />
+          <ErrorState message={error} onRetry={loadDaily} isPlan={isPlanError} />
         ) : (
           <>
             {/* 7-Day Forecast */}
@@ -128,52 +144,89 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
               </div>
             </section>
 
-            {/* Hourly Breakdown */}
+            {/* Hourly Breakdown — load on demand */}
             <section className="bg-white/5 border border-white/10 rounded-3xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-[#a8d66b] text-xs font-bold tracking-widest uppercase mb-0.5">Hourly Breakdown</p>
                   <p className="text-white font-extrabold text-lg">Today's hour-by-hour</p>
                 </div>
-                <div className="flex gap-2">
-                  {['temp', 'rain'].map(t => (
-                    <button key={t} onClick={() => setActiveHourTab(t)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeHourTab === t ? 'bg-[#a8d66b] text-[#1a3c2e]' : 'bg-white/10 text-white/50 hover:text-white'}`}>
-                      {t === 'temp' ? '🌡️ Temp' : '💧 Rain'}
-                    </button>
-                  ))}
-                </div>
+                {hourly && (
+                  <div className="flex gap-2">
+                    {['temp', 'rain'].map(t => (
+                      <button key={t} onClick={() => setActiveHourTab(t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeHourTab === t ? 'bg-[#a8d66b] text-[#1a3c2e]' : 'bg-white/10 text-white/50 hover:text-white'}`}>
+                        {t === 'temp' ? '🌡️ Temp' : '💧 Rain'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={hourlyDisplay}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis dataKey="hour" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false}
-                    unit={activeHourTab === 'temp' ? '°' : '%'} />
-                  <Tooltip content={<CustomTooltip />} />
-                  {activeHourTab === 'temp'
-                    ? <Line type="monotone" dataKey="temperature"      name="Temp"   stroke="#a8d66b" strokeWidth={2} dot={false} />
-                    : <Line type="monotone" dataKey="rain_probability" name="Rain %" stroke="#5b8dd9" strokeWidth={2} dot={false} />
-                  }
-                </LineChart>
-              </ResponsiveContainer>
-              {hourly && (() => {
-                const rainHour = hourly.find(h => (h.rain_probability ?? 0) > 50)
-                return rainHour ? (
-                  <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
-                    <span className="text-2xl">🌧️</span>
-                    <div>
-                      <p className="text-blue-200 text-sm font-bold">Rain likely at {rainHour.hour}</p>
-                      <p className="text-blue-300/60 text-xs">{rainHour.rain_probability}% probability — plan field work accordingly</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
-                    <span className="text-2xl">✅</span>
-                    <p className="text-emerald-200 text-sm font-bold">No significant rain expected today</p>
-                  </div>
-                )
-              })()}
+
+              {!hourly && !hourlyLoading && !hourlyError && (
+                <div className="flex flex-col items-center justify-center py-10 gap-4">
+                  <p className="text-white/40 text-sm text-center">Hour-by-hour breakdown for today — loaded on demand.</p>
+                  <button onClick={loadHourly}
+                    className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all hover:shadow-lg hover:shadow-[#a8d66b]/20 active:scale-95">
+                    ⏱️ Load Hourly Forecast
+                  </button>
+                </div>
+              )}
+
+              {hourlyLoading && (
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <svg className="w-6 h-6 animate-spin text-[#a8d66b]" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  <p className="text-white/40 text-sm">Fetching hourly data…</p>
+                </div>
+              )}
+
+              {hourlyError && (
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <p className="text-red-300 text-sm">{hourlyError}</p>
+                  <button onClick={loadHourly}
+                    className="bg-white/10 hover:bg-white/15 text-white font-bold px-5 py-2 rounded-xl text-sm transition-all active:scale-95">
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {hourly && (
+                <>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={hourlyDisplay}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis dataKey="hour" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false}
+                        unit={activeHourTab === 'temp' ? '°' : '%'} />
+                      <Tooltip content={<CustomTooltip />} />
+                      {activeHourTab === 'temp'
+                        ? <Line type="monotone" dataKey="temperature"      name="Temp"   stroke="#a8d66b" strokeWidth={2} dot={false} />
+                        : <Line type="monotone" dataKey="rain_probability" name="Rain %" stroke="#5b8dd9" strokeWidth={2} dot={false} />
+                      }
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {(() => {
+                    const rainHour = hourly.find(h => (h.rain_probability ?? 0) > 50)
+                    return rainHour ? (
+                      <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+                        <span className="text-2xl">🌧️</span>
+                        <div>
+                          <p className="text-blue-200 text-sm font-bold">Rain likely at {rainHour.hour}</p>
+                          <p className="text-blue-300/60 text-xs">{rainHour.rain_probability}% probability — plan field work accordingly</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+                        <span className="text-2xl">✅</span>
+                        <p className="text-emerald-200 text-sm font-bold">No significant rain expected today</p>
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
             </section>
           </>
         )}
