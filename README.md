@@ -40,8 +40,7 @@ Built as a technical assessment submission for **Weather-AI**.
 
 ```
 api/
-├── proxy.js                 # Vercel serverless proxy — forwards all GET requests to Weather-AI (bypasses CORS)
-└── analyze.js               # Vercel serverless proxy — forwards multipart image uploads to Weather-AI
+└── proxy.js                 # Vercel serverless proxy — forwards all GET requests to Weather-AI (bypasses CORS)
 src/
 ├── components/
 │   ├── SplashScreen.jsx     # Canvas particle animation intro
@@ -152,14 +151,14 @@ The app is a fully static React SPA — deploy the `dist/` output to any platfor
 
 ## 🌐 Weather-AI APIs Used
 
-| Endpoint | Purpose |
+| Endpoint | Where Used |
 |---|---|
-| `GET /v1/current` | Live weather per farm |
-| `GET /v1/daily` | 7-day daily forecast |
-| `GET /v1/hourly` | 24-hour hourly forecast |
-| `GET /v1/insights` | AI agronomic risk alerts |
-| `GET /v1/usage` | API quota tracking |
-| `GET /v1/weather-geo` | Reverse geo lookup on farm add |
+| `GET /v1/current` | Dashboard — live weather per farm card, refreshed every 5 minutes |
+| `GET /v1/daily` | Farm Detail — 7-day forecast bar chart |
+| `GET /v1/hourly` | Farm Detail — hourly temperature & rain line chart |
+| `GET /v1/insights` | Alert Feed — AI agronomic risk flags per farm |
+| `GET /v1/usage` | Dashboard sidebar — monthly API quota tracker |
+| `GET /v1/weather-geo` | Add Farm Modal — reverse geo lookup on GPS pin |
 
 ---
 

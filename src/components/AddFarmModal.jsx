@@ -1,7 +1,5 @@
 import { useState } from 'react'
-
-const BASE    = 'https://api.weather-ai.co'
-const API_KEY = import.meta.env.VITE_WEATHERAI_KEY
+import { getWeatherGeo } from '../services/weatherApi'
 
 const CROP_TYPES = ['Tea', 'Maize', 'Coffee', 'Horticulture', 'Wheat', 'Rice', 'Dairy Pasture', 'Other']
 const STEPS = { DETAILS: 'details', LOCATION: 'location', CONFIRMING: 'confirming' }
@@ -29,21 +27,15 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
         const { latitude: lat, longitude: lng, accuracy } = pos.coords
         setCoords({ lat, lng, accuracy: Math.round(accuracy) })
 
-        // Call WeatherAI /v1/weather-geo with the real GPS coords to get location name
+        // Resolve location name via the proxy (keeps API key server-side)
         try {
-          const res = await fetch(
-            `${BASE}/v1/weather-geo?lat=${lat}&lon=${lng}`,
-            { headers: { Authorization: `Bearer ${API_KEY}` } }
-          )
-          if (res.ok) {
-            const data = await res.json()
-            const geo = data?.ip_geo ?? data?.location ?? {}
-            setGeoMeta({
-              city:    geo.city    ?? null,
-              region:  geo.region  ?? null,
-              country: geo.country ?? null,
-            })
-          }
+          const data = await getWeatherGeo(lat, lng)
+          const geo = data?.ip_geo ?? data?.location ?? data ?? {}
+          setGeoMeta({
+            city:    geo.city    ?? null,
+            region:  geo.region  ?? null,
+            country: geo.country ?? null,
+          })
         } catch {
           // Non-fatal — we still have the GPS coords
         }

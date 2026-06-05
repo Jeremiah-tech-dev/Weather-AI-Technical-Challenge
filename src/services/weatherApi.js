@@ -148,63 +148,6 @@ export async function getHourlyForecast(lat, lng) {
   return normaliseHourlyForecast(raw)
 }
 
-export async function analyzeTree(formData) {
-  const { allowed, reason } = checkBudget()
-  if (!allowed) throw new BudgetError(reason)
-  let res
-  try {
-    res = await fetch(IS_PROD ? '/api/analyze' : 'https://api.weather-ai.co/v1/trees/analyze', {
-      method: 'POST',
-      headers: IS_PROD ? {} : { 'Authorization': `Bearer ${API_KEY}` },
-      body: formData,
-    })
-  } catch {
-    throw new NetworkError('Network error — check your connection and try again.')
-  }
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    if (res.status === 403 && body?.error) throw new PlanError(body.error)
-    throw new NetworkError(`Network error — ${res.status}: ${res.statusText}`)
-  }
-  consumeApiCall()
-  const r = await res.json()
-  return {
-    analysis_id:      r.analysis_id      ?? null,
-    tree_count:       r.total_tree_count ?? r.tree_count ?? 0,
-    density_per_acre: r.tree_density_per_acre ?? null,
-    confidence:       r.confidence_score ?? null,
-    canopy_coverage:  r.canopy_coverage_pct ?? null,
-    species_guess:    r.tree_species_guess ?? null,
-    overlay_url:      r.overlay_image_url  ?? r.overlay_url ?? r.annotated_url ?? null,
-    original_url:     r.original_image_url ?? null,
-    canopy: {
-      healthy:           r.tree_health?.healthy           ?? r.canopy?.healthy           ?? null,
-      needs_care:        r.tree_health?.needs_care        ?? r.canopy?.needs_care        ?? null,
-      needs_replacement: r.tree_health?.needs_replacement ?? r.canopy?.needs_replacement ?? null,
-    },
-    observations:    r.observations    ?? [],
-    recommendations: r.recommendations ?? [],
-    analyzed_at:     r.timestamp ?? r.analyzed_at ?? new Date().toISOString(),
-  }
-}
-
-export async function getTreeHistory() {
-  const raw = await call('/v1/trees/history')
-  const arr = raw?.analyses ?? raw?.history ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
-  return arr.map((h, i) => ({
-    id:          h.id          ?? i + 1,
-    analyzed_at: h.analyzed_at ?? h.created_at ?? new Date().toISOString(),
-    tree_count:  h.tree_count  ?? h.trees ?? 0,
-    canopy: {
-      healthy:           h.canopy?.healthy           ?? h.healthy_pct            ?? null,
-      needs_care:        h.canopy?.needs_care        ?? h.needs_care_pct         ?? null,
-      needs_replacement: h.canopy?.needs_replacement ?? h.needs_replacement_pct  ?? null,
-    },
-    thumbnail:   h.thumbnail   ?? h.image_url ?? h.url ?? null,
-    overlay_url: h.overlay_url ?? h.annotated_url ?? h.thumbnail ?? null,
-  }))
-}
-
 export async function getInsights(lat, lng, crop) {
   const raw = await call(`/v1/insights?lat=${lat}&lon=${lng}&crop=${encodeURIComponent(crop)}`)
   return normaliseInsights(raw)
