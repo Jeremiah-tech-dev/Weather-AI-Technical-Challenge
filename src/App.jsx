@@ -339,11 +339,12 @@ function App() {
                 ),
               },
               {
-                label: 'Tree Analysis',
-                desc: 'AI drone image analysis — tree count & canopy health.',
+                label: 'GPS Farm Pinning',
+                desc: 'Pin exact farm coordinates via browser GPS for hyperlocal weather data.',
                 icon: (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C9 7 7 9 7 13a5 5 0 0010 0c0-4-2-6-5-11zm0 11v7m-3 0h6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                   </svg>
                 ),
               },
