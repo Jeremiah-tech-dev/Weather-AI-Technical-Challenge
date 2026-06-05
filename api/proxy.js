@@ -14,12 +14,14 @@ export default async function handler(req, res) {
       method: req.method,
       headers: {
         'Authorization': `Bearer ${process.env.VITE_WEATHERAI_KEY}`,
-        'Content-Type': req.headers['content-type'] || 'application/json',
       },
       body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
     })
 
-    const data = await apiRes.json().catch(() => ({}))
+    const text = await apiRes.text()
+    let data
+    try { data = JSON.parse(text) } catch { data = { error: text } }
+
     res.status(apiRes.status).json(data)
   } catch (err) {
     res.status(500).json({ error: 'Proxy request failed' })

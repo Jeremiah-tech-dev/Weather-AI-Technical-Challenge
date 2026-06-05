@@ -7,10 +7,6 @@ const SEVERITY_STYLE = {
   low:    { bg: 'bg-blue-500/10',  border: 'border-blue-500/25',  badge: 'bg-blue-500/20 text-blue-300' },
 }
 
-const FALLBACK_ALERTS = [
-  { id: 'f1', severity: 'high',   icon: '🚨', title: 'Monitor Soil Moisture',       body: 'Prolonged dry spells detected in your region. Check soil moisture levels and consider irrigation to protect crop yield.',                                              timestamp: new Date().toISOString(), farmName: 'General Advisory' },
-  { id: 'f3', severity: 'low',    icon: 'ℹ️', title: 'Upgrade for Full AI Insights', body: 'You are on the free tier. Upgrade to a paid Weather-AI plan to unlock full per-farm agronomic risk alerts across all your locations.', timestamp: new Date().toISOString(), farmName: 'Weather-AI' },
-]
 
 function timeAgo(iso) {
   const diff = Date.now() - new Date(iso).getTime()
@@ -79,6 +75,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
       let all = []
       for (const farm of farms) {
         const data = await getInsights(farm.lat, farm.lng, farm.crop)
+          .catch(() => getInsights(farm.lat, farm.lng, farm.crop))
         data.forEach(a => all.push({ ...a, farmName: farm.name }))
       }
       try {
@@ -93,7 +90,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
       setAlerts(all)
     } catch (e) {
       if (e instanceof BudgetError) { onBudgetError(e.message); return }
-      if (e instanceof PlanError)   { setPlanError(true); setAlerts(FALLBACK_ALERTS); return }
+      if (e instanceof PlanError)   { setPlanError(true); return }
       setError(e instanceof NetworkError ? e.message : 'Network error — check your connection and try again.')
     } finally {
       setLoading(false)
@@ -154,21 +151,28 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
                   Retry
                 </button>
               </div>
+            ) : planError ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-2"
+                  style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                  ⚡
+                </div>
+                <span className="text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full"
+                  style={{ background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24' }}>
+                  Free Tier Active
+                </span>
+                <p className="text-white font-extrabold text-xl mt-1">AI Alerts Unavailable</p>
+                <p className="text-white/40 text-sm max-w-xs leading-relaxed">
+                  The <span className="text-[#a8d66b] font-semibold">Weather-AI Insights API</span> is not available on the free plan. Upgrade to a paid tier to unlock full agronomic risk alerts across all your farms.
+                </p>
+                <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+                  className="mt-2 font-bold px-8 py-3 rounded-xl text-sm transition-all hover:shadow-lg active:scale-95"
+                  style={{ background: 'linear-gradient(135deg,#a8d66b,#96c45a)', color: '#1a3c2e', boxShadow: '0 4px 20px rgba(168,214,107,0.25)' }}>
+                  Upgrade to Paid Plan ↗
+                </a>
+              </div>
             ) : (
               <>
-                {planError && (
-                  <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl px-5 py-4 mb-5">
-                    <span className="text-xl shrink-0 mt-0.5">⚠️</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-amber-300 font-bold text-sm">Free tier — AI insights are limited</p>
-                      <p className="text-amber-300/60 text-xs mt-0.5 leading-relaxed">Showing general advisories. Upgrade to a paid Weather-AI plan for full per-farm agronomic risk alerts.</p>
-                    </div>
-                    <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
-                      className="shrink-0 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95">
-                      Upgrade ↗
-                    </a>
-                  </div>
-                )}
                 {filtered.length === 0 ? (
                   <div className="text-center py-24 border border-dashed border-white/10 rounded-3xl">
                     <div className="text-5xl mb-4">✅</div>

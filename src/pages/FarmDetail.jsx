@@ -42,9 +42,10 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
     setError(null)
     try {
       const [d, h] = await Promise.all([
-        getDailyForecast(farm.lat, farm.lng),
+        getDailyForecast(farm.lat, farm.lng)
+          .catch(() => getDailyForecast(farm.lat, farm.lng)),
         getHourlyForecast(farm.lat, farm.lng)
-          .catch(() => getHourlyForecast(farm.lat, farm.lng)), // retry once on 500
+          .catch(() => getHourlyForecast(farm.lat, farm.lng)),
       ])
       setDaily(d)
       setHourly(h)
