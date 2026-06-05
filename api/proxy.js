@@ -26,6 +26,8 @@ export default async function handler(req, res) {
     let data
     try { data = JSON.parse(text) } catch { data = { error: text } }
 
+    console.log('[proxy]', req.method, url, '->', apiRes.status, JSON.stringify(data).slice(0, 200))
+
     // Forward the real status code — never swallow it as 500
     res.status(apiRes.status).json(data)
   } catch (err) {
