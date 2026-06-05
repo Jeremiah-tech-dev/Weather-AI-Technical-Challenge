@@ -32,12 +32,16 @@ Built as a technical assessment submission for **Weather-AI**.
 | Charts | Recharts | React-native chart library for forecast data visualization |
 | Auth (client) | bcryptjs | Password hashing in the browser — plain text is never stored |
 | API | Weather-AI REST API | Provides live weather, forecasts, insights and usage data |
+| Serverless Proxy | Vercel API Routes | Server-side proxy that forwards requests to Weather-AI, bypassing browser CORS restrictions and keeping the API key server-side in production |
 
 ---
 
 ## 📁 Project Structure
 
 ```
+api/
+├── proxy.js                 # Vercel serverless proxy — forwards all GET requests to Weather-AI (bypasses CORS)
+└── analyze.js               # Vercel serverless proxy — forwards multipart image uploads to Weather-AI
 src/
 ├── components/
 │   ├── SplashScreen.jsx     # Canvas particle animation intro
@@ -46,7 +50,7 @@ src/
 │   ├── AuthPage.jsx         # Register / Login
 │   ├── Dashboard.jsx        # Farm overview with live weather cards
 │   ├── FarmDetail.jsx       # 7-day + hourly forecast charts
-│   └── AlertFeed.jsx        # AI agronomic risk alerts
+└─── AlertFeed.jsx        # AI agronomic risk alerts
 ├── services/
 │   └── weatherApi.js        # All Weather-AI API calls + response normalisers
 ├── store/
@@ -165,6 +169,7 @@ The app is a fully static React SPA — deploy the `dist/` output to any platfor
 - User sessions are held **in memory only** and are cleared on tab close
 - API budget is **enforced before every request** — once the monthly limit is reached, no further calls are made
 - Farm coordinates are validated for bounds (`-90→90` lat, `-180→180` lng) before being sent to the API
+- In production, all Weather-AI API calls are routed through **Vercel serverless functions** — the API key is never exposed in the browser bundle
 
 ---
 

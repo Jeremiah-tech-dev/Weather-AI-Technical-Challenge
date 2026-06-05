@@ -50,15 +50,13 @@ function AnimatedNumber({ value, suffix = '' }) {
   return <>{display}{suffix}</>
 }
 
-function ApiUsageBar({ used, limit, aiUsed, aiLimit }) {
-  const pct     = Math.round((used / limit) * 100)
-  const color   = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#a8d66b'
-  const aiPct   = aiLimit ? Math.round((aiUsed / aiLimit) * 100) : 0
-  const aiColor = aiPct >= 90 ? '#ef4444' : aiPct >= 70 ? '#f59e0b' : '#5b8dd9'
+function ApiUsageBar({ used, limit }) {
+  const pct   = Math.round((used / limit) * 100)
+  const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#a8d66b'
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">API Usage</p>
+        <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">📦 Monthly Quota</p>
         <span className="text-xs font-bold" style={{ color }}>{pct}%</span>
       </div>
       <p className="text-white text-sm font-bold mb-2">{used} <span className="text-white/40 font-normal">of {limit} calls used</span></p>
@@ -66,26 +64,14 @@ function ApiUsageBar({ used, limit, aiUsed, aiLimit }) {
         <div className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
       </div>
-      <div className="flex justify-between mt-2 mb-4">
+      <div className="flex justify-between mt-2">
         <span className="text-white/40 text-[10px]">{limit - used} remaining</span>
         <span className="text-white/40 text-[10px]">Resets monthly</span>
       </div>
-      {aiLimit != null && (
-        <>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">AI Requests</p>
-            <span className="text-xs font-bold" style={{ color: aiColor }}>{aiPct}%</span>
-          </div>
-          <p className="text-white text-sm font-bold mb-2">{aiUsed} <span className="text-white/40 font-normal">of {aiLimit} AI calls used</span></p>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${aiPct}%`, background: aiColor, boxShadow: `0 0 8px ${aiColor}80` }} />
-          </div>
-          <div className="flex justify-between mt-2">
-            <span className="text-white/40 text-[10px]">{aiLimit - aiUsed} AI remaining</span>
-            {aiPct >= 70 && <span className="text-amber-400 text-[10px] font-semibold">⚠️ Running low</span>}
-          </div>
-        </>
+      {pct >= 70 && (
+        <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
+          <p className="text-amber-300 text-[11px] font-semibold">⚠️ Approaching limit — use calls wisely</p>
+        </div>
       )}
     </div>
   )
@@ -191,8 +177,6 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const [toast,      setToast]      = useState(null)   // { message, type }
   const [apiUsed,    setApiUsed]    = useState(0)
   const [apiLimit,   setApiLimit]   = useState(1000)
-  const [aiUsed,     setAiUsed]     = useState(0)
-  const [aiLimit,    setAiLimit]    = useState(200)
 
   function showToast(message, type = 'network') {
     setToast({ message, type })
@@ -204,11 +188,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
     try {
       const data = await getCurrentWeather(farm.lat, farm.lng)
       // refresh real usage from API after each weather call
-      getUsage().then(u => {
-        setApiUsed(u.used); setApiLimit(u.limit)
-        if (u.aiUsed != null) setAiUsed(u.aiUsed)
-        if (u.aiLimit != null) setAiLimit(u.aiLimit)
-      }).catch(() => {})
+      getUsage().then(u => { setApiUsed(u.used); setApiLimit(u.limit) }).catch(() => {})
       return data
     } catch (e) {
       if (e instanceof BudgetError) showToast(e.message, 'budget')
@@ -230,11 +210,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   }
 
   useEffect(() => {
-    getUsage().then(u => {
-      setApiUsed(u.used); setApiLimit(u.limit)
-      if (u.aiUsed != null) setAiUsed(u.aiUsed)
-      if (u.aiLimit != null) setAiLimit(u.aiLimit)
-    }).catch(() => {})
+    getUsage().then(u => { setApiUsed(u.used); setApiLimit(u.limit) }).catch(() => {})
   }, []) // eslint-disable-line
 
   useEffect(() => {
@@ -367,7 +343,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
           </div>
 
           <div className="lg:w-72 shrink-0 space-y-4" style={{ animation: 'fadeSlideUp 0.5s ease-out 0.2s both' }}>
-            <ApiUsageBar used={apiUsed} limit={apiLimit} aiUsed={aiUsed} aiLimit={aiLimit} />
+            <ApiUsageBar used={apiUsed} limit={apiLimit} />
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Quick Access</p>
               {[
