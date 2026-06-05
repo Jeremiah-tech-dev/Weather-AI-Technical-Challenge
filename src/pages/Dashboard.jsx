@@ -133,14 +133,14 @@ function ApiUsageBar({ used, limit, onOpen }) {
   )
 }
 
-function FarmCard({ farm, index, onClick }) {
+function FarmCard({ farm, index, onClick, onRetry }) {
   const risk  = riskLevel(farm.weather)
   const badge = RISK[risk]
   const w     = farm.weather
   const icon  = w ? (CONDITION_ICON[w.condition] || '🌡️') : null
   return (
-    <div onClick={onClick}
-      className="relative group rounded-3xl overflow-hidden cursor-pointer border border-white/10 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
+    <div
+      className="relative group rounded-3xl overflow-hidden border border-white/10 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
       style={{
         background: 'linear-gradient(145deg,rgba(255,255,255,0.08) 0%,rgba(255,255,255,0.03) 100%)',
         backdropFilter: 'blur(12px)',
@@ -164,8 +164,14 @@ function FarmCard({ farm, index, onClick }) {
           </span>
         </div>
         {farm.error ? (
-          <div className="flex items-center gap-2 text-red-400/70 text-xs mt-2">
-            <span>⚠️</span> {farm.error}
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex items-center gap-2 text-red-400/70 text-xs">
+              <span>⚠️</span> Weather unavailable — server error
+            </div>
+            <button onClick={e => { e.stopPropagation(); onRetry(farm) }}
+              className="flex items-center gap-1.5 text-[11px] font-bold text-[#a8d66b] hover:text-white bg-[#a8d66b]/10 hover:bg-[#a8d66b]/20 border border-[#a8d66b]/20 px-3 py-1.5 rounded-lg transition-all w-fit">
+              🔄 Retry
+            </button>
           </div>
         ) : w ? (
           <div className="flex items-end justify-between">
@@ -191,7 +197,9 @@ function FarmCard({ farm, index, onClick }) {
         )}
         <div className="mt-5 pt-4 border-t border-white/8 flex items-center justify-between">
           <p className="text-white/20 text-[10px]">{farm.lat.toFixed(4)}°, {farm.lng.toFixed(4)}°</p>
-          <span className="inline-flex items-center gap-1 bg-[#a8d66b]/15 group-hover:bg-[#a8d66b] text-[#a8d66b] group-hover:text-[#1a3c2e] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#a8d66b]/30 group-hover:border-[#a8d66b] transition-all duration-300">View details →</span>
+          {!farm.error && (
+            <span onClick={onClick} className="inline-flex items-center gap-1 bg-[#a8d66b]/15 group-hover:bg-[#a8d66b] text-[#a8d66b] group-hover:text-[#1a3c2e] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#a8d66b]/30 group-hover:border-[#a8d66b] transition-all duration-300 cursor-pointer">View details →</span>
+          )}
         </div>
       </div>
     </div>
@@ -276,6 +284,14 @@ export default function Dashboard({ onLogout, onNavigate }) {
       setApiUsed(u.aiUsed)
       setApiLimit(u.aiLimit)
     } catch { /* silent */ }
+  }
+
+  async function retryWeather(farm) {
+    setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, error: null } : f))
+    const weather = await fetchWeather(farm)
+    setFarms(prev => prev.map(f =>
+      f.id === farm.id ? { ...f, weather: weather ?? null, error: weather ? null : 'error' } : f
+    ))
   }
 
   useEffect(() => {
@@ -401,7 +417,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {farms.map((farm, i) => (
-                  <FarmCard key={farm.id} farm={farm} index={i} onClick={() => onNavigate('Farm Detail', farm)} />
+                  <FarmCard key={farm.id} farm={farm} index={i} onClick={() => onNavigate('Farm Detail', farm)} onRetry={retryWeather} />
                 ))}
               </div>
             )}
