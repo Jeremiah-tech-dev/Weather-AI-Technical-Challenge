@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget } from '../store/farmStore'
-import { getCurrentWeather, getUsage, BudgetError, NetworkError } from '../services/weatherApi'
+import { getCurrentWeather, getUsage, BudgetError, NetworkError, PlanError } from '../services/weatherApi'
 import AddFarmModal from '../components/AddFarmModal'
 
 const RISK = {
@@ -50,27 +50,48 @@ function AnimatedNumber({ value, suffix = '' }) {
   return <>{display}{suffix}</>
 }
 
+const QUOTA_STAGES = [
+  { min: 100, color: '#ef4444', glow: '#ef444480', label: '🔴 Exhausted',      bg: 'bg-red-500/10',   border: 'border-red-500/20',   text: 'text-red-300',   msg: 'AI quota exhausted — upgrade to restore alerts.' },
+  { min: 75,  color: '#ef4444', glow: '#ef444480', label: '🔴 Critical',       bg: 'bg-red-500/10',   border: 'border-red-500/20',   text: 'text-red-300',   msg: 'Only a few AI calls left this month.' },
+  { min: 50,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Half used',      bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-300', msg: 'Halfway through your monthly AI quota.' },
+  { min: 25,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Moderate',       bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-300', msg: 'AI quota in use — monitor your usage.' },
+  { min: 0,   color: '#a8d66b', glow: '#a8d66b80', label: '🟢 Healthy',        bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', msg: null },
+]
+
+function getStage(pct) {
+  return QUOTA_STAGES.find(s => pct >= s.min)
+}
+
 function ApiUsageBar({ used, limit }) {
-  const pct   = Math.round((used / limit) * 100)
-  const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#a8d66b'
+  const pct   = Math.min(Math.round((used / limit) * 100), 100)
+  const stage = getStage(pct)
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">📦 Monthly Quota</p>
-        <span className="text-xs font-bold" style={{ color }}>{pct}%</span>
+        <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">🤖 AI Quota</p>
+        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${stage.bg} ${stage.border} ${stage.text}`}>
+          {stage.label}
+        </span>
       </div>
-      <p className="text-white text-sm font-bold mb-2">{used} <span className="text-white/40 font-normal">of {limit} calls used</span></p>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+      <div className="flex items-end gap-1 mb-2">
+        <p className="text-white text-2xl font-black leading-none">{used}</p>
+        <p className="text-white/40 text-sm mb-0.5">/ {limit} AI calls</p>
+      </div>
+      <div className="h-2.5 bg-white/10 rounded-full overflow-hidden mb-1">
         <div className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}80` }} />
+          style={{ width: `${pct}%`, background: stage.color, boxShadow: `0 0 8px ${stage.glow}` }} />
       </div>
-      <div className="flex justify-between mt-2">
+      <div className="flex justify-between mb-3">
         <span className="text-white/40 text-[10px]">{limit - used} remaining</span>
-        <span className="text-white/40 text-[10px]">Resets monthly</span>
+        <span className={`text-[10px] font-bold ${stage.text}`}>{pct}%</span>
       </div>
-      {pct >= 70 && (
-        <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
-          <p className="text-amber-300 text-[11px] font-semibold">⚠️ Approaching limit — use calls wisely</p>
+      {stage.msg && (
+        <div className={`${stage.bg} border ${stage.border} rounded-xl px-3 py-2 space-y-2`}>
+          <p className={`${stage.text} text-[11px] font-semibold`}>⚠️ {stage.msg}</p>
+          <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+            className="flex items-center justify-center gap-1 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold text-[11px] py-1.5 rounded-lg transition-colors">
+            ⚡ Upgrade Plan ↗
+          </a>
         </div>
       )}
     </div>
@@ -145,15 +166,21 @@ function FarmCard({ farm, index, onClick }) {
 function Toast({ message, type, onDismiss }) {
   const isBudget = type === 'budget'
   return (
-    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-2xl max-w-md"
+    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl px-5 py-3.5 shadow-2xl max-w-lg"
       style={{
         background: isBudget ? '#450a0a' : '#1c1917',
         border: `1px solid ${isBudget ? 'rgba(239,68,68,0.4)' : 'rgba(239,68,68,0.3)'}`,
         animation: 'dropDown 0.4s cubic-bezier(0.34,1.56,0.64,1)',
       }}>
       <span className="text-lg shrink-0">{isBudget ? '⛔' : '📡'}</span>
-      <p className="text-red-200 text-sm font-semibold">{message}</p>
-      <button onClick={onDismiss} className="text-red-400/60 hover:text-red-300 ml-2 text-lg leading-none shrink-0">✕</button>
+      <p className="text-red-200 text-sm font-semibold flex-1">{message}</p>
+      {isBudget && (
+        <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+          className="shrink-0 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+          Upgrade ↗
+        </a>
+      )}
+      <button onClick={onDismiss} className="text-red-400/60 hover:text-red-300 ml-1 text-lg leading-none shrink-0">✕</button>
     </div>
   )
 }
@@ -176,7 +203,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState(null)   // { message, type }
   const [apiUsed,    setApiUsed]    = useState(0)
-  const [apiLimit,   setApiLimit]   = useState(1000)
+  const [apiLimit,   setApiLimit]   = useState(200)
 
   function showToast(message, type = 'network') {
     setToast({ message, type })
@@ -188,12 +215,12 @@ export default function Dashboard({ onLogout, onNavigate }) {
     try {
       const data = await getCurrentWeather(farm.lat, farm.lng)
       // refresh real usage from API after each weather call
-      getUsage().then(u => { setApiUsed(u.used); setApiLimit(u.limit) }).catch(() => {})
+      getUsage().then(u => { setApiUsed(u.aiUsed ?? u.used); setApiLimit(u.aiLimit ?? 200) }).catch(() => {})
       return data
     } catch (e) {
       if (e instanceof BudgetError) showToast(e.message, 'budget')
-      else if (e instanceof NetworkError) showToast(e.message, 'network')
-      else showToast('Network error — could not fetch weather.', 'network')
+      else if (e instanceof PlanError) showToast(e.message, 'budget')
+      else showToast(e.message ?? 'Network error — could not fetch weather.', 'network')
       return null
     }
   }

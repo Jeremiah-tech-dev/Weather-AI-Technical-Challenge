@@ -16,26 +16,47 @@ function timeAgo(iso) {
   return `${Math.floor(h / 24)}d ago`
 }
 
+const QUOTA_STAGES = [
+  { min: 100, color: '#ef4444', glow: '#ef444480', label: '🔴 Exhausted',   bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-300',     msg: 'AI quota exhausted — upgrade to restore alerts.' },
+  { min: 75,  color: '#ef4444', glow: '#ef444480', label: '🔴 Critical',    bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-300',     msg: 'Only a few AI calls left this month.' },
+  { min: 50,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Half used',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   text: 'text-amber-300',   msg: 'Halfway through your monthly AI quota.' },
+  { min: 25,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Moderate',    bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   text: 'text-amber-300',   msg: 'AI quota in use — monitor your usage.' },
+  { min: 0,   color: '#a8d66b', glow: '#a8d66b80', label: '🟢 Healthy',     bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', msg: null },
+]
+function getStage(pct) { return QUOTA_STAGES.find(s => pct >= s.min) }
+
 function ApiUsageSidebar({ used, limit }) {
-  const pct   = Math.round((used / limit) * 100)
-  const color = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#a8d66b'
+  const pct   = Math.min(Math.round((used / limit) * 100), 100)
+  const stage = getStage(pct)
   return (
     <div className="space-y-4">
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">API Quota</p>
-        <p className="text-white text-2xl font-black mb-0.5">{used} <span className="text-white/30 text-base font-normal">/ {limit}</span></p>
-        <p className="text-white/40 text-xs mb-3">calls used this month</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-white/60 text-xs font-bold uppercase tracking-widest">🤖 AI Quota</p>
+          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${stage.bg} ${stage.border} ${stage.text}`}>
+            {stage.label}
+          </span>
+        </div>
+        <div className="flex items-end gap-1 mb-1">
+          <p className="text-white text-2xl font-black leading-none">{used}</p>
+          <p className="text-white/30 text-sm mb-0.5">/ {limit} AI calls</p>
+        </div>
+        <p className="text-white/40 text-xs mb-3">used this month</p>
         <div className="h-3 bg-white/10 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 10px ${color}60` }} />
+            style={{ width: `${pct}%`, background: stage.color, boxShadow: `0 0 10px ${stage.glow}` }} />
         </div>
         <div className="flex justify-between mt-2">
           <span className="text-white/40 text-[10px]">{limit - used} remaining</span>
-          <span className="text-white/40 text-[10px]">Resets monthly</span>
+          <span className={`text-[10px] font-bold ${stage.text}`}>{pct}%</span>
         </div>
-        {pct >= 80 && (
-          <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
-            <p className="text-amber-300 text-[11px] font-semibold">⚠️ Approaching limit — use calls wisely</p>
+        {stage.msg && (
+          <div className={`mt-3 ${stage.bg} border ${stage.border} rounded-xl px-3 py-2 space-y-2`}>
+            <p className={`${stage.text} text-[11px] font-semibold`}>⚠️ {stage.msg}</p>
+            <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+              className="flex items-center justify-center gap-1 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold text-[11px] py-1.5 rounded-lg transition-colors">
+              ⚡ Upgrade Plan ↗
+            </a>
           </div>
         )}
       </div>
@@ -63,7 +84,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
   const [apiUsed,   setApiUsed]   = useState(0)
-  const [apiLimit,  setApiLimit]  = useState(1000)
+  const [apiLimit,  setApiLimit]  = useState(200)
   const [filter,    setFilter]    = useState('all')
   const [planError, setPlanError] = useState(false)
 
@@ -80,8 +101,8 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
       }
       try {
         const usage = await getUsage()
-        setApiUsed(usage.used)
-        setApiLimit(usage.limit)
+        setApiUsed(usage.aiUsed ?? usage.used)
+        setApiLimit(usage.aiLimit ?? 200)
       } catch {
         // usage fetch failed silently
       }

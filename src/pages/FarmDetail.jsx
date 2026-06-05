@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { getDailyForecast, getHourlyForecast, BudgetError, NetworkError } from '../services/weatherApi'
+import { getDailyForecast, getHourlyForecast, BudgetError, NetworkError, PlanError } from '../services/weatherApi'
 
 const CONDITION_ICON = { 'Sunny': '☀️', 'Partly Cloudy': '⛅', 'Rain': '🌧️', 'Clear': '🌙', 'Cloudy': '☁️', 'Light Rain': '🌦️', 'Thunderstorm': '⛈️', 'Foggy': '🌫️' }
 
@@ -16,16 +16,24 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-function ErrorState({ message, onRetry }) {
+function ErrorState({ message, onRetry, isPlan }) {
   return (
     <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
-      <span className="text-5xl">📡</span>
-      <p className="text-white font-bold text-lg">Could not load forecast</p>
+      <span className="text-5xl">{isPlan ? '⚡' : '📡'}</span>
+      <p className="text-white font-bold text-lg">{isPlan ? 'Plan Limit Reached' : 'Could not load forecast'}</p>
       <p className="text-white/40 text-sm max-w-xs">{message}</p>
-      <button onClick={onRetry}
-        className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
-        Retry
-      </button>
+      {isPlan ? (
+        <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
+          className="mt-2 font-bold px-8 py-3 rounded-xl text-sm transition-all hover:shadow-lg active:scale-95"
+          style={{ background: 'linear-gradient(135deg,#a8d66b,#96c45a)', color: '#1a3c2e', boxShadow: '0 4px 20px rgba(168,214,107,0.25)' }}>
+          Upgrade Plan ↗
+        </a>
+      ) : (
+        <button onClick={onRetry}
+          className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
+          Retry
+        </button>
+      )}
     </div>
   )
 }
@@ -35,11 +43,13 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
   const [hourly,         setHourly]        = useState(null)
   const [loading,        setLoading]       = useState(true)
   const [error,          setError]         = useState(null)
+  const [isPlanError,    setIsPlanError]    = useState(false)
   const [activeHourTab,  setActiveHourTab] = useState('temp')
 
   async function load() {
     setLoading(true)
     setError(null)
+    setIsPlanError(false)
     try {
       const [d, h] = await Promise.all([
         getDailyForecast(farm.lat, farm.lng)
@@ -51,6 +61,7 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
       setHourly(h)
     } catch (e) {
       if (e instanceof BudgetError) { onBudgetError(e.message); return }
+      if (e instanceof PlanError)   { setIsPlanError(true); setError(e.message); return }
       setError(e instanceof NetworkError ? e.message : 'Network error — check your connection and try again.')
     } finally {
       setLoading(false)
@@ -84,7 +95,7 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
             <p className="text-white/40 text-sm">Fetching forecast data…</p>
           </div>
         ) : error ? (
-          <ErrorState message={error} onRetry={load} />
+          <ErrorState message={error} onRetry={load} isPlan={isPlanError} />
         ) : (
           <>
             {/* 7-Day Forecast */}
