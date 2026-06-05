@@ -22,14 +22,14 @@ Built as a technical assessment submission for **Weather-AI**.
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | React 19 |
-| Build Tool | Vite 8 |
-| Styling | Tailwind CSS v4 |
-| Charts | Recharts |
-| Auth (client) | bcryptjs |
-| API | Weather-AI REST API |
+| Layer | Technology | Why |
+|---|---|---|
+| Framework | React 19 | UI component library for building the interactive dashboard |
+| Build Tool | Vite 8 | Fast development server and production bundler |
+| Styling | Tailwind CSS v4 | Utility-first CSS for rapid, responsive UI design |
+| Charts | Recharts | React-native chart library for forecast data visualization |
+| Auth (client) | bcryptjs | Password hashing in the browser — plain text is never stored |
+| API | Weather-AI REST API | Provides live weather, forecasts, insights and usage data |
 
 ---
 
@@ -161,12 +161,6 @@ The app is a fully static React SPA — deploy the `dist/` output to any platfor
 - User sessions are held **in memory only** and are cleared on tab close
 - API budget is **enforced before every request** — once the monthly limit is reached, no further calls are made
 - Farm coordinates are validated for bounds (`-90→90` lat, `-180→180` lng) before being sent to the API
-
----
-
-## 📸 Screenshots
-
-> _Add screenshots of your live deployment here_
 
 ---
 
