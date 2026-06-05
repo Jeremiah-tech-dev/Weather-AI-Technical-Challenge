@@ -1,7 +1,22 @@
 import { checkBudget, consumeApiCall } from '../store/farmStore'
 
-const BASE    = 'https://api.weather-ai.co'
-const API_KEY = import.meta.env.VITE_WEATHERAI_KEY
+const IS_PROD = import.meta.env.PROD
+const API_KEY  = import.meta.env.VITE_WEATHERAI_KEY
+
+// In production, route through the Vercel proxy to avoid CORS.
+// In development, call the Weather-AI API directly.
+function buildUrl(path) {
+  if (IS_PROD) {
+    const [pathname, qs] = path.split('?')
+    return `/api/proxy?path=${encodeURIComponent(pathname)}${qs ? `&${qs}` : ''}`
+  }
+  return `https://api.weather-ai.co${path}`
+}
+
+function buildHeaders() {
+  // In dev, send the key directly. In prod the proxy injects it server-side.
+  return IS_PROD ? {} : { 'Authorization': `Bearer ${API_KEY}` }
+}
 
 export class BudgetError extends Error {
   constructor(msg) { super(msg); this.isBudget = true }
@@ -21,10 +36,10 @@ async function call(path, options = {}) {
 
   let res
   try {
-    res = await fetch(`${BASE}${path}`, {
+    res = await fetch(buildUrl(path), {
       ...options,
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        ...buildHeaders(),
         ...(options.headers || {}),
       },
     })
@@ -139,9 +154,9 @@ export async function analyzeTree(formData) {
   if (!allowed) throw new BudgetError(reason)
   let res
   try {
-    res = await fetch(`${BASE}/v1/trees/analyze`, {
+    res = await fetch(IS_PROD ? '/api/analyze' : 'https://api.weather-ai.co/v1/trees/analyze', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${API_KEY}` },
+      headers: IS_PROD ? {} : { 'Authorization': `Bearer ${API_KEY}` },
       body: formData,
     })
   } catch {
