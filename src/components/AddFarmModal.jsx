@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { getWeatherGeo, BudgetError, NetworkError } from '../services/weatherApi'
+
+const BASE    = 'https://api.weather-ai.co'
+const API_KEY = import.meta.env.VITE_WEATHERAI_KEY
 
 const CROP_TYPES = ['Tea', 'Maize', 'Coffee', 'Horticulture', 'Wheat', 'Rice', 'Dairy Pasture', 'Other']
 const STEPS = { DETAILS: 'details', LOCATION: 'location', CONFIRMING: 'confirming' }
@@ -8,7 +10,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
   const [step,       setStep]       = useState(STEPS.DETAILS)
   const [details,    setDetails]    = useState({ name: '', crop: '', region: '' })
   const [coords,     setCoords]     = useState(null)
-  const [geoData,    setGeoData]    = useState(null) // weather-geo response
+  const [geoMeta,    setGeoMeta]    = useState(null) // { city, region, country }
   const [locError,   setLocError]   = useState('')
   const [locLoading, setLocLoading] = useState(false)
 
@@ -21,28 +23,45 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
   async function detectLocation() {
     setLocError('')
     setLocLoading(true)
+
     navigator.geolocation.getCurrentPosition(
       async pos => {
-        const { latitude: lat, longitude: lng } = pos.coords
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords
+        setCoords({ lat, lng, accuracy: Math.round(accuracy) })
+
+        // Call WeatherAI /v1/weather-geo with the real GPS coords to get location name
         try {
-          const data = await getWeatherGeo(lat, lng)
-          setGeoData(data)
-        } catch (e) {
-          if (e instanceof BudgetError) {
-            setLocError(e.message)
-            setLocLoading(false)
-            return
+          const res = await fetch(
+            `${BASE}/v1/weather-geo?lat=${lat}&lon=${lng}`,
+            { headers: { Authorization: `Bearer ${API_KEY}` } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const geo = data?.ip_geo ?? data?.location ?? {}
+            setGeoMeta({
+              city:    geo.city    ?? null,
+              region:  geo.region  ?? null,
+              country: geo.country ?? null,
+            })
           }
-          // NetworkError: coords still valid, proceed without geo data
+        } catch {
+          // Non-fatal — we still have the GPS coords
         }
-        setCoords({ lat, lng })
+
         setLocLoading(false)
         setStep(STEPS.CONFIRMING)
       },
-      () => {
-        setLocError('Could not get GPS location. Please allow location access and try again.')
+      err => {
         setLocLoading(false)
-      }
+        if (err.code === 1) {
+          setLocError('Location access denied. Click the 🔒 icon in your browser address bar → Site settings → Location → Allow, then try again.')
+        } else if (err.code === 2) {
+          setLocError('📍 Your device location (GPS) is turned off. Please turn on Location/GPS in your device settings, then try again.')
+        } else {
+          setLocError('Location request timed out. Move to an open area and try again.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
@@ -54,7 +73,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
       region:  details.region.trim(),
       lat:     coords.lat,
       lng:     coords.lng,
-      weather: geoData ?? null,
+      weather: null,
     })
   }
 
@@ -121,16 +140,26 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
               ← Back
             </button>
             <span className="text-[#1a3c2e] text-xs font-bold tracking-widest uppercase">Set Location</span>
-            <h2 className="text-2xl font-extrabold text-gray-900 mt-1 mb-2">Pin your farm location</h2>
-            <p className="text-gray-400 text-xs mb-6">Uses your device GPS and validates coordinates via WeatherAI.</p>
+            <h2 className="text-2xl font-extrabold text-gray-900 mt-1 mb-2">Pin your farm</h2>
+            <p className="text-gray-400 text-xs mb-3">
+              Your browser will ask for permission — click <strong className="text-gray-700">Allow</strong>. Make sure your device Location/GPS is turned on.
+            </p>
+
+            {/* Free tier notice */}
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
+              <span className="text-amber-500 text-sm shrink-0 mt-0.5">⚠️</span>
+              <p className="text-amber-700 text-[11px] leading-relaxed">
+                <strong>Free tier API notice:</strong> This system uses the WeatherAI free plan. Location detection relies on your browser's GPS — IP-based geo-lookup is a paid feature. For best accuracy, ensure your device GPS is enabled.
+              </p>
+            </div>
 
             <div className="border border-gray-200 rounded-2xl p-5">
-              <p className="font-semibold text-sm text-gray-800 mb-1">📍 Detect my location</p>
-              <p className="text-gray-400 text-xs mb-4">One tap — browser GPS captures your exact lat/lng.</p>
+              <p className="font-semibold text-sm text-gray-800 mb-1">📍 Detect my GPS location</p>
+              <p className="text-gray-400 text-xs mb-4">Captures your exact coordinates and resolves your location name via WeatherAI.</p>
               <button
                 onClick={detectLocation}
                 disabled={locLoading}
-                className="w-full bg-[#1a3c2e] hover:bg-[#0f2419] disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                className="w-full bg-[#1a3c2e] hover:bg-[#0f2419] disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
               >
                 {locLoading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -138,13 +167,17 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                     </svg>
-                    Detecting…
+                    Detecting location…
                   </span>
-                ) : 'Detect my location'}
+                ) : '📡 Get My Location'}
               </button>
             </div>
 
-            {locError && <p className="text-red-500 text-xs text-center mt-3">{locError}</p>}
+            {locError && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <p className="text-red-600 text-xs leading-relaxed">{locError}</p>
+              </div>
+            )}
           </>
         )}
 
@@ -154,18 +187,37 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">📍</div>
               <span className="text-[#1a3c2e] text-xs font-bold tracking-widest uppercase">Location Confirmed</span>
-              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Coordinates saved</h2>
-              <p className="text-gray-400 text-sm mt-1">
-                {coords.lat.toFixed(4)}°, {coords.lng.toFixed(4)}°
+              <h2 className="text-2xl font-extrabold text-gray-900 mt-1">Coordinates captured</h2>
+              {geoMeta?.city && (
+                <p className="text-[#1a3c2e] font-semibold text-sm mt-1">
+                  {[geoMeta.city, geoMeta.region, geoMeta.country].filter(Boolean).join(', ')}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs mt-1">
+                {coords.lat.toFixed(6)}°, {coords.lng.toFixed(6)}°
+              </p>
+              <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mt-2">
+                ⚠️ Free tier — location resolved via browser GPS
               </p>
             </div>
-            <div className="bg-gray-50 rounded-2xl p-4 text-sm space-y-1.5 mb-6">
+            <div className="bg-gray-50 rounded-2xl p-4 text-sm space-y-1.5 mb-4">
               <p><span className="text-gray-400">Farm:</span> <span className="font-semibold text-gray-800">{details.name}</span></p>
               <p><span className="text-gray-400">Crop:</span> <span className="font-semibold text-gray-800">{details.crop}</span></p>
               <p><span className="text-gray-400">Region:</span> <span className="font-semibold text-gray-800">{details.region}</span></p>
+              {geoMeta?.city && (
+                <p><span className="text-gray-400">Detected location:</span> <span className="font-semibold text-gray-800">{[geoMeta.city, geoMeta.region].filter(Boolean).join(', ')}</span></p>
+              )}
             </div>
-            <p className="text-xs text-gray-400 text-center mb-4">
-              WeatherAI will fetch live weather for these coordinates.
+
+            {/* Accuracy + upgrade notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 space-y-1">
+              <p className="text-amber-700 text-[11px] font-semibold">⚠️ Location accuracy: ~{coords.accuracy ?? '?'}m radius (free tier)</p>
+              <p className="text-amber-600 text-[11px] leading-relaxed">For precise farm-level GPS accuracy, upgrade to a paid WeatherAI plan.</p>
+            </div>
+
+            {/* Thank you */}
+            <p className="text-center text-[#1a3c2e] text-xs font-semibold mb-4">
+              🌿 Thank you for using FarmPulse! Your farm will be live in seconds.
             </p>
             <button
               onClick={confirmFarm}
