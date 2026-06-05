@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs'
 
-const STORE_KEY = 'farmpulse_users_v2'
+const STORE_KEY = 'farmpulse_users_v3'
 
-// Clear any stale data from old keys
-;['farmpulse_users'].forEach(k => localStorage.removeItem(k))
+// Clear any stale data from old keys (including dev credentials)
+;['farmpulse_users', 'farmpulse_users_v2'].forEach(k => localStorage.removeItem(k))
 
 // ── In-memory session (disappears on tab close) ────────────────────────
 let _session = null // { userId, name }
