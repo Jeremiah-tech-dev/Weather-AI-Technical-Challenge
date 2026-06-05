@@ -157,7 +157,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState(null)   // { message, type }
   const [apiUsed,    setApiUsed]    = useState(user?.apiCallsUsed ?? 0)
-  const apiLimit = user?.apiCallsLimit ?? 100
+  const apiLimit = user?.apiCallsLimit ?? 1000
 
   function showToast(message, type = 'network') {
     setToast({ message, type })

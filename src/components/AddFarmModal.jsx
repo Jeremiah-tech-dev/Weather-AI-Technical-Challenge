@@ -91,7 +91,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
                   placeholder="e.g. Nandi Hills Farm"
                   value={details.name}
                   onChange={e => setDetails(d => ({ ...d, name: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#a8d66b]"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#a8d66b]"
                 />
               </div>
 
@@ -100,7 +100,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
                 <select
                   value={details.crop}
                   onChange={e => setDetails(d => ({ ...d, crop: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#a8d66b] bg-white"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#a8d66b] bg-white"
                 >
                   <option value="">Select crop type</option>
                   {CROP_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -114,7 +114,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
                   placeholder="e.g. Kericho, Rift Valley"
                   value={details.region}
                   onChange={e => setDetails(d => ({ ...d, region: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#a8d66b]"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#a8d66b]"
                 />
               </div>
 
@@ -168,7 +168,7 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
                   placeholder="Near Bomet market, tea farm…"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#a8d66b] mb-2 resize-none"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#a8d66b] mb-2 resize-none"
                 />
                 <button
                   onClick={resolveDescription}

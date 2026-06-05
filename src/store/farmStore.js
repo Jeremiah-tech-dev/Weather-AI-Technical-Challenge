@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs'
 
-const STORE_KEY = 'farmpulse_users'
+const STORE_KEY = 'farmpulse_users_v2'
+
+// Clear any stale data from old keys
+;['farmpulse_users'].forEach(k => localStorage.removeItem(k))
 
 // ── In-memory session (disappears on tab close) ────────────────────────
 let _session = null // { userId, name }
@@ -33,7 +36,7 @@ export async function register({ name, phone, password }) {
     phone,
     passwordHash,          // never stored plain
     apiCallsUsed: 0,
-    apiCallsLimit: 100,
+    apiCallsLimit: 1000,
     farms: [],
     createdAt: new Date().toISOString().slice(0, 10),
   }

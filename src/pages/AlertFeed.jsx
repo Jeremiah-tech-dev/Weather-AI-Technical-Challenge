@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getInsights, getUsage, mockInsights, isMockMode, BudgetError } from '../services/weatherApi'
-import { getCurrentUser, checkBudget, consumeApiCall } from '../store/farmStore'
+import { getInsights, getUsage, BudgetError, NetworkError, PlanError } from '../services/weatherApi'
+import { getCurrentUser } from '../store/farmStore'
 
 const SEVERITY_STYLE = {
-  high:   { bg: 'bg-red-500/10',    border: 'border-red-500/25',    badge: 'bg-red-500/20 text-red-300',    bar: '#ef4444' },
-  medium: { bg: 'bg-amber-500/10',  border: 'border-amber-500/25',  badge: 'bg-amber-500/20 text-amber-300', bar: '#f59e0b' },
-  low:    { bg: 'bg-blue-500/10',   border: 'border-blue-500/25',   badge: 'bg-blue-500/20 text-blue-300',   bar: '#3b82f6' },
+  high:   { bg: 'bg-red-500/10',   border: 'border-red-500/25',   badge: 'bg-red-500/20 text-red-300' },
+  medium: { bg: 'bg-amber-500/10', border: 'border-amber-500/25', badge: 'bg-amber-500/20 text-amber-300' },
+  low:    { bg: 'bg-blue-500/10',  border: 'border-blue-500/25',  badge: 'bg-blue-500/20 text-blue-300' },
 }
 
 function timeAgo(iso) {
@@ -39,7 +39,6 @@ function ApiUsageSidebar({ used, limit }) {
           </div>
         )}
       </div>
-
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">Alert Legend</p>
         {[['high','🚨','Immediate action needed'],['medium','⚠️','Monitor closely'],['low','ℹ️','For your awareness']].map(([sev, icon, desc]) => {
@@ -63,65 +62,49 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
   const user   = getCurrentUser()
   const [alerts,   setAlerts]   = useState([])
   const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState(null)
   const [apiUsed,  setApiUsed]  = useState(user?.apiCallsUsed ?? 0)
-  const [apiLimit, setApiLimit] = useState(user?.apiCallsLimit ?? 100)
+  const [apiLimit, setApiLimit] = useState(user?.apiCallsLimit ?? 1000)
   const [filter,   setFilter]   = useState('all')
+  const [planError, setPlanError] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        let all = []
-        if (isMockMode()) {
-          await new Promise(r => setTimeout(r, 600))
-          for (const farm of farms) {
-            const b = checkBudget(); if (!b.allowed) { onBudgetError(b.reason); break }
-            consumeApiCall()
-            mockInsights(farm.name, farm.crop).forEach(a => all.push({ ...a, farmName: farm.name }))
-          }
-          const u = getCurrentUser()
-          setApiUsed(u?.apiCallsUsed ?? 0)
-          setApiLimit(u?.apiCallsLimit ?? 100)
-        } else {
-          for (const farm of farms) {
-            try {
-              const data = await getInsights(farm.lat, farm.lng, farm.crop)
-              data.forEach(a => all.push({ ...a, farmName: farm.name }))
-            } catch (e) {
-              if (e instanceof BudgetError) { onBudgetError(e.message); break }
-              // real API failed — use mock for this farm
-              const b = checkBudget(); if (b.allowed) consumeApiCall()
-              mockInsights(farm.name, farm.crop).forEach(a => all.push({ ...a, farmName: farm.name }))
-            }
-          }
-          try {
-            const usage = await getUsage()
-            setApiUsed(usage.used)
-            setApiLimit(usage.limit)
-          } catch {
-            const u = getCurrentUser()
-            setApiUsed(u?.apiCallsUsed ?? 0)
-            setApiLimit(u?.apiCallsLimit ?? 100)
-          }
-        }
-        // sort by severity then time
-        const order = { high:0, medium:1, low:2 }
-        all.sort((a,b) => (order[a.severity]??3) - (order[b.severity]??3))
-        setAlerts(all)
-      } catch (e) {
-        if (e instanceof BudgetError) onBudgetError(e.message)
-      } finally {
-        setLoading(false)
+  async function load() {
+    setLoading(true)
+    setError(null)
+    setPlanError(false)
+    try {
+      let all = []
+      for (const farm of farms) {
+        const data = await getInsights(farm.lat, farm.lng, farm.crop)
+        data.forEach(a => all.push({ ...a, farmName: farm.name }))
       }
+      try {
+        const usage = await getUsage()
+        setApiUsed(usage.used)
+        setApiLimit(usage.limit)
+      } catch {
+        const u = getCurrentUser()
+        setApiUsed(u?.apiCallsUsed ?? 0)
+        setApiLimit(u?.apiCallsLimit ?? 100)
+      }
+      const order = { high: 0, medium: 1, low: 2 }
+      all.sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))
+      setAlerts(all)
+    } catch (e) {
+      if (e instanceof BudgetError) { onBudgetError(e.message); return }
+      if (e instanceof PlanError) { setPlanError(true); return }
+      setError(e instanceof NetworkError ? e.message : 'Network error — check your connection and try again.')
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, []) // eslint-disable-line
+  }
+
+  useEffect(() => { load() }, []) // eslint-disable-line
 
   const filtered = filter === 'all' ? alerts : alerts.filter(a => a.severity === filter)
 
   return (
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg, #071510 0%, #0d2318 40%, #071510 100%)' }}>
-      {/* Header */}
       <div className="sticky top-0 z-40 border-b border-white/8" style={{ background: 'rgba(7,21,16,0.9)', backdropFilter: 'blur(16px)' }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
           <button onClick={onBack} className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors">← Back</button>
@@ -130,7 +113,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
             <p className="font-extrabold text-white">Alert Feed</p>
             <p className="text-white/40 text-xs">AI-generated agronomic risk flags across all your farms</p>
           </div>
-          {!loading && (
+          {!loading && !error && (
             <span className="bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold px-3 py-1 rounded-full">
               {alerts.filter(a => a.severity === 'high').length} critical
             </span>
@@ -140,10 +123,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-6" style={{ animation: 'fadeSlideUp 0.5s ease-out' }}>
-
-          {/* Left — alerts list */}
           <div className="flex-1 min-w-0">
-            {/* Filter tabs */}
             <div className="flex gap-2 mb-5">
               {['all','high','medium','low'].map(f => (
                 <button key={f} onClick={() => setFilter(f)}
@@ -162,6 +142,26 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                 </svg>
                 <p className="text-white/40 text-sm">Fetching AI risk assessments…</p>
+              </div>
+            ) : planError ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-4 text-center border border-dashed border-amber-500/20 rounded-3xl">
+                <span className="text-5xl">⚠️</span>
+                <p className="text-white font-bold text-lg">AI Insights Limited</p>
+                <p className="text-white/40 text-sm max-w-xs leading-relaxed">Your free plan includes limited AI insights. Some risk flags may be unavailable. Upgrade to Pro for full agronomic alerts across all farms.</p>
+                <a href="https://app.weather-ai.co" target="_blank" rel="noreferrer"
+                  className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
+                  Upgrade for Full Access ↗
+                </a>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+                <span className="text-5xl">📡</span>
+                <p className="text-white font-bold text-lg">Could not load alerts</p>
+                <p className="text-white/40 text-sm max-w-xs">{error}</p>
+                <button onClick={load}
+                  className="mt-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95">
+                  Retry
+                </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-center py-24 border border-dashed border-white/10 rounded-3xl">
@@ -195,8 +195,6 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
               </div>
             )}
           </div>
-
-          {/* Right — API usage sidebar */}
           <div className="lg:w-64 shrink-0">
             <ApiUsageSidebar used={apiUsed} limit={apiLimit} />
           </div>

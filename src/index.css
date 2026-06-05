@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+input, select, textarea {
+  color: #111827;
+  background-color: #ffffff;
+}

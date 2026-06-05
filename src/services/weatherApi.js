@@ -1,6 +1,6 @@
 import { checkBudget, consumeApiCall } from '../store/farmStore'
 
-const BASE    = 'https://api.weatherai.co'
+const BASE    = 'https://api.weather-ai.co'
 const API_KEY = import.meta.env.VITE_WEATHERAI_KEY
 
 export class BudgetError extends Error {
@@ -9,6 +9,10 @@ export class BudgetError extends Error {
 
 export class NetworkError extends Error {
   constructor(msg) { super(msg); this.isNetwork = true }
+}
+
+export class PlanError extends Error {
+  constructor(msg) { super(msg); this.isPlan = true }
 }
 
 async function call(path, options = {}) {
@@ -21,7 +25,6 @@ async function call(path, options = {}) {
       ...options,
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
-        'x-api-key': API_KEY,
         ...(options.headers || {}),
       },
     })
@@ -30,8 +33,10 @@ async function call(path, options = {}) {
   }
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new NetworkError(`Network error — ${res.status}: ${text.slice(0, 100) || res.statusText}`)
+    const body = await res.json().catch(() => null)
+    if (res.status === 403 && body?.error) throw new PlanError(body.error)
+    const text = body ? JSON.stringify(body) : res.statusText
+    throw new NetworkError(`Network error — ${res.status}: ${text.slice(0, 100)}`)
   }
 
   consumeApiCall()
@@ -119,7 +124,7 @@ export async function analyzeTree(formData) {
   try {
     res = await fetch(`${BASE}/v1/trees/analyze`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${API_KEY}`, 'x-api-key': API_KEY },
+      headers: { 'Authorization': `Bearer ${API_KEY}` },
       body: formData,
     })
   } catch {
