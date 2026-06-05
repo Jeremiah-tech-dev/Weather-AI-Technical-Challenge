@@ -116,7 +116,7 @@ function FarmCard({ farm, index, onClick }) {
         )}
         <div className="mt-5 pt-4 border-t border-white/8 flex items-center justify-between">
           <p className="text-white/20 text-[10px]">{farm.lat.toFixed(4)}°, {farm.lng.toFixed(4)}°</p>
-          <span className="text-white/30 text-[10px] group-hover:text-[#a8d66b] transition-colors">View details →</span>
+          <span className="inline-flex items-center gap-1 bg-[#a8d66b]/15 group-hover:bg-[#a8d66b] text-[#a8d66b] group-hover:text-[#1a3c2e] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[#a8d66b]/30 group-hover:border-[#a8d66b] transition-all duration-300">View details →</span>
         </div>
       </div>
     </div>
