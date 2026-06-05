@@ -175,7 +175,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const [farms, setFarms] = useState(() => getFarms())
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState(null)   // { message, type }
-  const [apiUsed,    setApiUsed]    = useState(425)
+  const [apiUsed,    setApiUsed]    = useState(0)
   const [apiLimit,   setApiLimit]   = useState(1000)
 
   function showToast(message, type = 'network') {
