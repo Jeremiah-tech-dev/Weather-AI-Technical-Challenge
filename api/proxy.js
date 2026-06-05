@@ -9,30 +9,35 @@ export default async function handler(req, res) {
   const params = new URLSearchParams(query).toString()
   const url = `https://api.weather-ai.co${path}${params ? `?${params}` : ''}`
 
-  try {
+  const attempt = async () => {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
-
-    const apiRes = await fetch(url, {
-      method: req.method,
-      headers: { 'Authorization': `Bearer ${process.env.VITE_WEATHERAI_KEY}` },
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeout)
-
-    const text = await apiRes.text()
-    let data
-    try { data = JSON.parse(text) } catch { data = { error: text } }
-
-    // Forward the real status code — never swallow it as 500
-    res.status(apiRes.status).json(data)
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      res.status(504).json({ error: 'Weather-AI request timed out. Try again.' })
-    } else {
-      res.status(502).json({ error: 'Proxy could not reach Weather-AI. Check your connection.' })
+    try {
+      const apiRes = await fetch(url, {
+        method: req.method,
+        headers: { 'Authorization': `Bearer ${process.env.VITE_WEATHERAI_KEY}` },
+        body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      const text = await apiRes.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { error: text } }
+      return { status: apiRes.status, data }
+    } catch (err) {
+      clearTimeout(timeout)
+      if (err.name === 'AbortError') return { status: 504, data: { error: 'Weather-AI request timed out. Try again.' } }
+      return { status: 502, data: { error: 'Proxy could not reach Weather-AI.' } }
     }
   }
+
+  let result = await attempt()
+
+  // Retry once on 500 after a short delay — free tier occasionally rate-limits
+  if (result.status === 500) {
+    await new Promise(r => setTimeout(r, 1000))
+    result = await attempt()
+  }
+
+  res.status(result.status).json(result.data)
 }
