@@ -33,9 +33,11 @@ export default async function handler(req, res) {
 
   let result = await attempt()
 
-  // Retry once on 500 after a short delay — free tier occasionally rate-limits
-  if (result.status === 500) {
-    await new Promise(r => setTimeout(r, 1000))
+  // Retry up to 3 times on 500 — free tier occasionally rate-limits
+  const delays = [1000, 2000, 3000]
+  for (const delay of delays) {
+    if (result.status !== 500) break
+    await new Promise(r => setTimeout(r, delay))
     result = await attempt()
   }
 
