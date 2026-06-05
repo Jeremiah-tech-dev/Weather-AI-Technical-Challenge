@@ -51,6 +51,8 @@ async function call(path, options = {}) {
     const body = await res.json().catch(() => null)
     if (res.status === 403 && body?.error) throw new PlanError(body.error)
     if (res.status === 429) throw new PlanError(body?.error ?? 'Monthly quota exceeded. Upgrade your Weather-AI plan.')
+    if (res.status === 504) throw new NetworkError('Request timed out — Weather-AI took too long. Try again.')
+    if (res.status === 502) throw new NetworkError('Could not reach Weather-AI. Check your connection.')
     const text = body ? JSON.stringify(body) : res.statusText
     throw new NetworkError(`Network error — ${res.status}: ${text.slice(0, 100)}`)
   }
