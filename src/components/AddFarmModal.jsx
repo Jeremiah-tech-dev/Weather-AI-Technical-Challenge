@@ -36,20 +36,22 @@ export default function AddFarmModal({ onClose, onFarmAdded }) {
     )
   }
 
-  // ── Option B: AI text → lat/lng (mocked — replace with real endpoint) ─
+  // ── Option B: text description → lat/lng via Nominatim (free, no key) ─
   async function resolveDescription() {
     if (!description.trim()) return
     setLocError('')
     setLocLoading(true)
     try {
-      // TODO: replace with real /v1/weather-geo or geocoding call
-      // Mock: parse "near Bomet" → rough coords for demo
-      const mockCoords = { lat: -0.7819, lng: 35.1167 } // Bomet, Kenya
-      await new Promise(r => setTimeout(r, 900)) // simulate API delay
-      setCoords(mockCoords)
+      const q = encodeURIComponent(`${description.trim()}, Kenya`)
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'FarmPulse/1.0' }
+      })
+      const data = await res.json()
+      if (!data.length) { setLocError('Location not found. Try a more specific description.'); return }
+      setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) })
       setStep(STEPS.CONFIRMING)
     } catch {
-      setLocError('Could not resolve location. Try again.')
+      setLocError('Could not resolve location. Check your connection and try again.')
     } finally {
       setLocLoading(false)
     }

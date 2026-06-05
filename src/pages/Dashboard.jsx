@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget } from '../store/farmStore'
+import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget, getCachedWeather, setCachedWeather } from '../store/farmStore'
 import { getCurrentWeather, BudgetError, NetworkError } from '../services/weatherApi'
 import AddFarmModal from '../components/AddFarmModal'
 
@@ -153,7 +153,9 @@ function StatChip({ icon, label, value }) {
 
 export default function Dashboard({ onLogout, onNavigate }) {
   const user     = getCurrentUser()
-  const [farms,      setFarms]      = useState(getFarms)
+  const [farms, setFarms] = useState(() =>
+    getFarms().map(f => ({ ...f, weather: getCachedWeather(f.id) ?? undefined }))
+  )
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState(null)   // { message, type }
   const [apiUsed,    setApiUsed]    = useState(user?.apiCallsUsed ?? 0)
@@ -164,10 +166,13 @@ export default function Dashboard({ onLogout, onNavigate }) {
   }
 
   async function fetchWeather(farm) {
+    const cached = getCachedWeather(farm.id)
+    if (cached) return cached
     const { allowed, reason } = checkBudget()
     if (!allowed) { showToast(reason, 'budget'); return null }
     try {
       const data = await getCurrentWeather(farm.lat, farm.lng)
+      setCachedWeather(farm.id, data)
       setApiUsed(getCurrentUser()?.apiCallsUsed ?? 0)
       return data
     } catch (e) {
@@ -190,14 +195,18 @@ export default function Dashboard({ onLogout, onNavigate }) {
   }
 
   useEffect(() => {
-    farms.forEach(farm => {
-      if (!farm.weather && !farm.error) {
-        fetchWeather(farm).then(weather => {
-          setFarms(prev => prev.map(f =>
-            f.id === farm.id ? { ...f, weather: weather ?? undefined, error: weather ? undefined : 'Network error' } : f
-          ))
-        })
-      }
+    const toFetch = farms.filter(f => !f.weather && !f.error)
+    if (!toFetch.length) return
+    Promise.all(
+      toFetch.map(farm =>
+        fetchWeather(farm).then(weather => ({ id: farm.id, weather }))
+      )
+    ).then(results => {
+      setFarms(prev => prev.map(f => {
+        const r = results.find(r => r.id === f.id)
+        if (!r) return f
+        return { ...f, weather: r.weather ?? undefined, error: r.weather ? undefined : 'Network error' }
+      }))
     })
   }, []) // eslint-disable-line
 
