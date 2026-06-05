@@ -50,6 +50,7 @@ async function call(path, options = {}) {
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     if (res.status === 403 && body?.error) throw new PlanError(body.error)
+    if (res.status === 429) throw new PlanError(body?.error ?? 'Monthly quota exceeded. Upgrade your Weather-AI plan.')
     const text = body ? JSON.stringify(body) : res.statusText
     throw new NetworkError(`Network error — ${res.status}: ${text.slice(0, 100)}`)
   }
@@ -149,7 +150,7 @@ export async function getHourlyForecast(lat, lng) {
 }
 
 export async function getInsights(lat, lng, crop) {
-  const raw = await call(`/v1/insights?lat=${lat}&lon=${lng}&crop=${encodeURIComponent(crop)}`)
+  const raw = await call(`/v1/insights?lat=${lat}&lon=${lng}&crop=${encodeURIComponent(crop)}&ai=false`)
   return normaliseInsights(raw)
 }
 
