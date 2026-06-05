@@ -214,8 +214,6 @@ export default function Dashboard({ onLogout, onNavigate }) {
     if (!allowed) { showToast(reason, 'budget'); return null }
     try {
       const data = await getCurrentWeather(farm.lat, farm.lng)
-      // refresh real usage from API after each weather call
-      getUsage().then(u => { setApiUsed(u.aiUsed); setApiLimit(u.aiLimit) }).catch(() => {})
       return data
     } catch (e) {
       if (e instanceof BudgetError) showToast(e.message, 'budget')
@@ -237,7 +235,11 @@ export default function Dashboard({ onLogout, onNavigate }) {
   }
 
   useEffect(() => {
-    getUsage().then(u => { setApiUsed(u.aiUsed); setApiLimit(u.aiLimit) }).catch(() => {})
+    // Delay usage fetch so it never fires concurrently with weather calls
+    const t = setTimeout(() => {
+      getUsage().then(u => { setApiUsed(u.aiUsed); setApiLimit(u.aiLimit) }).catch(() => {})
+    }, 2000)
+    return () => clearTimeout(t)
   }, []) // eslint-disable-line
 
   useEffect(() => {
