@@ -101,8 +101,8 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
       }
       try {
         const usage = await getUsage()
-        setApiUsed(usage.aiUsed ?? usage.used)
-        setApiLimit(usage.aiLimit ?? 200)
+        setApiUsed(usage.aiUsed)
+        setApiLimit(usage.aiLimit)
       } catch {
         // usage fetch failed silently
       }

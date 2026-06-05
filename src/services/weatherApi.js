@@ -108,12 +108,12 @@ export function normaliseInsights(raw) {
 }
 
 export function normaliseUsage(raw) {
-  const limit       = raw?.limits?.requests    ?? raw?.limit ?? raw?.apiCallsLimit ?? raw?.calls_limit ?? 1000
-  const remaining   = raw?.remaining?.requests ?? null
-  const used        = remaining != null ? limit - remaining : (raw?.period?.requestCount ?? raw?.used ?? raw?.apiCallsUsed ?? raw?.calls_used ?? 0)
-  const aiLimit     = raw?.limits?.aiRequests     ?? null
-  const aiRemaining = raw?.remaining?.aiRequests  ?? null
-  const aiUsed      = aiRemaining != null && aiLimit != null ? aiLimit - aiRemaining : (raw?.period?.aiRequestCount ?? null)
+  const limit       = raw?.limits?.requests
+  const remaining   = raw?.remaining?.requests
+  const used        = raw?.period?.requestCount
+  const aiLimit     = raw?.limits?.aiRequests
+  const aiRemaining = raw?.remaining?.aiRequests
+  const aiUsed      = raw?.period?.aiRequestCount
   return { used, limit, remaining, aiUsed, aiLimit, aiRemaining }
 }
 
