@@ -17,48 +17,86 @@ function timeAgo(iso) {
 }
 
 const QUOTA_STAGES = [
-  { min: 100, color: '#ef4444', glow: '#ef444480', label: '🔴 Exhausted',   bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-300',     msg: 'AI quota exhausted — upgrade to restore alerts.' },
-  { min: 75,  color: '#ef4444', glow: '#ef444480', label: '🔴 Critical',    bg: 'bg-red-500/10',     border: 'border-red-500/20',     text: 'text-red-300',     msg: 'Only a few AI calls left this month.' },
-  { min: 50,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Half used',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   text: 'text-amber-300',   msg: 'Halfway through your monthly AI quota.' },
-  { min: 25,  color: '#f59e0b', glow: '#f59e0b80', label: '🟡 Moderate',    bg: 'bg-amber-500/10',   border: 'border-amber-500/20',   text: 'text-amber-300',   msg: 'AI quota in use — monitor your usage.' },
-  { min: 0,   color: '#a8d66b', glow: '#a8d66b80', label: '🟢 Healthy',     bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-300', msg: null },
+  { min: 100, color: '#ef4444', label: '🔴 Exhausted', text: 'text-red-300',     msg: 'AI quota exhausted — upgrade to restore alerts.' },
+  { min: 75,  color: '#ef4444', label: '🔴 Critical',  text: 'text-red-300',     msg: 'Only a few AI calls left this month.' },
+  { min: 50,  color: '#f59e0b', label: '🟡 Half used', text: 'text-amber-300',   msg: 'Halfway through your monthly AI quota.' },
+  { min: 25,  color: '#f59e0b', label: '🟡 Moderate',  text: 'text-amber-300',   msg: 'AI quota in use — monitor your usage.' },
+  { min: 0,   color: '#a8d66b', label: '🟢 Healthy',   text: 'text-emerald-300', msg: null },
 ]
 function getStage(pct) { return QUOTA_STAGES.find(s => pct >= s.min) }
 
-function ApiUsageSidebar({ used, limit }) {
+function DonutChart({ pct, color, used, limit }) {
+  const r = 54, cx = 64, cy = 64
+  const circ = 2 * Math.PI * r
+  const dash = (pct / 100) * circ
+  return (
+    <svg width="128" height="128" viewBox="0 0 128 128">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="14"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`}
+        style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 6px ${color})` }} />
+      <text x={cx} y={cy - 8} textAnchor="middle" fill="white" fontSize="20" fontWeight="900">{pct}%</text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">{used} / {limit}</text>
+      <text x={cx} y={cy + 22} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8">AI calls</text>
+    </svg>
+  )
+}
+
+function QuotaModal({ used, limit, onClose }) {
   const pct   = Math.min(Math.round((used / limit) * 100), 100)
   const stage = getStage(pct)
   return (
-    <div className="space-y-4">
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-white/60 text-xs font-bold uppercase tracking-widest">🤖 AI Quota</p>
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${stage.bg} ${stage.border} ${stage.text}`}>
-            {stage.label}
-          </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative rounded-3xl p-8 w-full max-w-sm mx-4 text-center"
+        style={{ background: 'linear-gradient(145deg,#0d2318,#071510)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', animation: 'fadeSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)' }}
+        onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/30 hover:text-white text-xl">✕</button>
+        <p className="text-[#a8d66b] text-xs font-black tracking-widest uppercase mb-1">Weather-AI</p>
+        <p className="text-white font-extrabold text-lg mb-6">Monthly AI Quota</p>
+        <div className="flex justify-center mb-6">
+          <DonutChart pct={pct} color={stage.color} used={used} limit={limit} />
         </div>
-        <div className="flex items-end gap-1 mb-1">
-          <p className="text-white text-2xl font-black leading-none">{used}</p>
-          <p className="text-white/30 text-sm mb-0.5">/ {limit} AI calls</p>
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {[['Used', used, stage.color], ['Remaining', limit - used, '#a8d66b'], ['Limit', limit, 'rgba(255,255,255,0.4)']].map(([lbl, val, clr]) => (
+            <div key={lbl} className="bg-white/5 rounded-2xl py-3 px-2">
+              <p className="text-white font-black text-lg" style={{ color: clr }}>{val}</p>
+              <p className="text-white/40 text-[10px] mt-0.5">{lbl}</p>
+            </div>
+          ))}
         </div>
-        <p className="text-white/40 text-xs mb-3">used this month</p>
-        <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${pct}%`, background: stage.color, boxShadow: `0 0 10px ${stage.glow}` }} />
+        <div className="bg-white/5 rounded-2xl px-4 py-2.5 mb-5 flex items-center justify-center gap-2">
+          <span className="text-sm">{stage.label.split(' ')[0]}</span>
+          <span className={`text-xs font-bold ${stage.text}`}>{stage.label.split(' ').slice(1).join(' ')}</span>
         </div>
-        <div className="flex justify-between mt-2">
-          <span className="text-white/40 text-[10px]">{limit - used} remaining</span>
-          <span className={`text-[10px] font-bold ${stage.text}`}>{pct}%</span>
-        </div>
-        {stage.msg && (
-          <div className={`mt-3 ${stage.bg} border ${stage.border} rounded-xl px-3 py-2 space-y-2`}>
-            <p className={`${stage.text} text-[11px] font-semibold`}>⚠️ {stage.msg}</p>
+        {stage.msg ? (
+          <div className="space-y-3">
+            <p className="text-white/50 text-xs">{stage.msg}</p>
             <a href="https://weather-ai.co" target="_blank" rel="noreferrer"
-              className="flex items-center justify-center gap-1 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold text-[11px] py-1.5 rounded-lg transition-colors">
+              className="flex items-center justify-center gap-1.5 font-bold text-sm py-2.5 rounded-xl transition-all hover:shadow-lg"
+              style={{ background: 'linear-gradient(135deg,#a8d66b,#96c45a)', color: '#1a3c2e' }}>
               ⚡ Upgrade Plan ↗
             </a>
           </div>
+        ) : (
+          <p className="text-white/30 text-xs">Resets monthly · Powered by Weather-AI</p>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ApiUsageSidebar({ onOpen }) {
+  return (
+    <div className="space-y-4">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">🤖 AI Quota</p>
+        <p className="text-white/40 text-xs mb-4 leading-relaxed">Check your monthly Weather-AI call usage and remaining quota.</p>
+        <button onClick={onOpen}
+          className="w-full flex items-center justify-center gap-2 font-black text-sm py-3 rounded-xl transition-all hover:shadow-xl hover:shadow-[#a8d66b]/20 hover:-translate-y-0.5 active:scale-95"
+          style={{ background: 'linear-gradient(135deg,#a8d66b,#96c45a)', color: '#1a3c2e', boxShadow: '0 4px 16px rgba(168,214,107,0.25)' }}>
+          📊 View Quota Usage
+        </button>
       </div>
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-3">Alert Legend</p>
@@ -85,8 +123,17 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
   const [error,     setError]     = useState(null)
   const [apiUsed,   setApiUsed]   = useState(0)
   const [apiLimit,  setApiLimit]  = useState(200)
+  const [showQuota, setShowQuota] = useState(false)
   const [filter,    setFilter]    = useState('all')
   const [planError, setPlanError] = useState(false)
+
+  async function loadQuota() {
+    try {
+      const u = await getUsage()
+      setApiUsed(u.aiUsed)
+      setApiLimit(u.aiLimit)
+    } catch { /* silent */ }
+  }
 
   async function load() {
     setLoading(true)
@@ -100,9 +147,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
         data.forEach(a => all.push({ ...a, farmName: farm.name }))
       }
       try {
-        const usage = await getUsage()
-        setApiUsed(usage.aiUsed)
-        setApiLimit(usage.aiLimit)
+        await loadQuota()
       } catch {
         // usage fetch failed silently
       }
@@ -229,10 +274,11 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
             )}
           </div>
           <div className="lg:w-64 shrink-0">
-            <ApiUsageSidebar used={apiUsed} limit={apiLimit} />
+            <ApiUsageSidebar onOpen={() => { loadQuota(); setShowQuota(true) }} />
           </div>
         </div>
       </main>
+      {showQuota && <QuotaModal used={apiUsed} limit={apiLimit} onClose={() => setShowQuota(false)} />}
     </div>
   )
 }
