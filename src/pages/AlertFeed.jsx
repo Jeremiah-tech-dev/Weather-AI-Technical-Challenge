@@ -63,8 +63,8 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
   const [alerts,   setAlerts]   = useState([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
-  const [apiUsed,  setApiUsed]  = useState(user?.apiCallsUsed ?? 0)
-  const [apiLimit, setApiLimit] = useState(user?.apiCallsLimit ?? 1000)
+  const [apiUsed,  setApiUsed]  = useState(0)
+  const [apiLimit, setApiLimit] = useState(1000)
   const [filter,   setFilter]   = useState('all')
   const [planError, setPlanError] = useState(false)
 
@@ -83,9 +83,7 @@ export default function AlertFeed({ farms, onBack, onBudgetError }) {
         setApiUsed(usage.used)
         setApiLimit(usage.limit)
       } catch {
-        const u = getCurrentUser()
-        setApiUsed(u?.apiCallsUsed ?? 0)
-        setApiLimit(u?.apiCallsLimit ?? 100)
+        // usage fetch failed silently — sidebar will show 0/1000
       }
       const order = { high: 0, medium: 1, low: 2 }
       all.sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3))

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget, getCachedWeather, setCachedWeather } from '../store/farmStore'
-import { getCurrentWeather, BudgetError, NetworkError } from '../services/weatherApi'
+import { getFarms, saveFarm, getCurrentUser, signOut, checkBudget } from '../store/farmStore'
+import { getCurrentWeather, getUsage, BudgetError, NetworkError } from '../services/weatherApi'
 import AddFarmModal from '../components/AddFarmModal'
 
 const RISK = {
@@ -9,11 +9,13 @@ const RISK = {
   act:   { label: 'Act Now',  classes: 'bg-red-500/20 text-red-300 border-red-500/30',            dot: 'bg-red-400',     glow: '#ef4444' },
 }
 
+// Risk derived from real API condition_code
+// WMO codes: 0-1 clear, 2-3 cloudy, 51-67 rain/drizzle, 71-77 snow, 80-82 showers, 95-99 thunderstorm
 function riskLevel(w) {
   if (!w) return 'safe'
-  const t = w.temperature ?? 20
-  if (t < 8 || t > 38) return 'act'
-  if (t < 12 || t > 32) return 'watch'
+  const code = parseInt(w.condition_code ?? w.condition ?? 0)
+  if (code >= 95 || code >= 80) return 'act'   // thunderstorm or heavy showers
+  if (code >= 51 || code >= 71) return 'watch' // drizzle, rain, snow
   return 'safe'
 }
 
@@ -153,27 +155,23 @@ function StatChip({ icon, label, value }) {
 
 export default function Dashboard({ onLogout, onNavigate }) {
   const user     = getCurrentUser()
-  const [farms, setFarms] = useState(() =>
-    getFarms().map(f => ({ ...f, weather: getCachedWeather(f.id) ?? undefined }))
-  )
+  const [farms, setFarms] = useState(() => getFarms())
   const [showModal,  setShowModal]  = useState(false)
   const [toast,      setToast]      = useState(null)   // { message, type }
-  const [apiUsed,    setApiUsed]    = useState(user?.apiCallsUsed ?? 0)
-  const apiLimit = user?.apiCallsLimit ?? 1000
+  const [apiUsed,    setApiUsed]    = useState(0)
+  const [apiLimit,   setApiLimit]   = useState(1000)
 
   function showToast(message, type = 'network') {
     setToast({ message, type })
   }
 
   async function fetchWeather(farm) {
-    const cached = getCachedWeather(farm.id)
-    if (cached) return cached
     const { allowed, reason } = checkBudget()
     if (!allowed) { showToast(reason, 'budget'); return null }
     try {
       const data = await getCurrentWeather(farm.lat, farm.lng)
-      setCachedWeather(farm.id, data)
-      setApiUsed(getCurrentUser()?.apiCallsUsed ?? 0)
+      // refresh real usage from API after each weather call
+      getUsage().then(u => { setApiUsed(u.used); setApiLimit(u.limit) }).catch(() => {})
       return data
     } catch (e) {
       if (e instanceof BudgetError) showToast(e.message, 'budget')
@@ -193,6 +191,10 @@ export default function Dashboard({ onLogout, onNavigate }) {
       ))
     })
   }
+
+  useEffect(() => {
+    getUsage().then(u => { setApiUsed(u.used); setApiLimit(u.limit) }).catch(() => {})
+  }, []) // eslint-disable-line
 
   useEffect(() => {
     const toFetch = farms.filter(f => !f.weather && !f.error)
