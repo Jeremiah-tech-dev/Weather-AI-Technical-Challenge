@@ -86,21 +86,6 @@ export function consumeApiCall() {
   updateUser(user)
 }
 
-// ── Weather cache (in-memory, survives logout/login within same tab) ───
-const _weatherCache = {} // { [farmId]: { data, cachedAt } }
-const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
-
-export function getCachedWeather(farmId) {
-  const entry = _weatherCache[farmId]
-  if (!entry) return null
-  if (Date.now() - entry.cachedAt > CACHE_TTL) { delete _weatherCache[farmId]; return null }
-  return entry.data
-}
-
-export function setCachedWeather(farmId, data) {
-  _weatherCache[farmId] = { data, cachedAt: Date.now() }
-}
-
 // ── Farm helpers ───────────────────────────────────────────────────────
 export function getFarms() {
   return getCurrentUser()?.farms || []

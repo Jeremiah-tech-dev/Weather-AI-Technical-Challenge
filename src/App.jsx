@@ -4,7 +4,6 @@ import { getSession } from './store/farmStore'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
 import FarmDetail from './pages/FarmDetail'
-import TreeAnalysis from './pages/TreeAnalysis'
 import AlertFeed from './pages/AlertFeed'
 
 const avatars = [
@@ -70,10 +69,6 @@ function App() {
   }
   if (page === 'farm-detail') {
     return <FarmDetail farm={pageCtx} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
-  }
-  if (page === 'tree-analysis') {
-    const farm = Array.isArray(pageCtx) ? pageCtx[0] : pageCtx
-    return <TreeAnalysis farm={farm} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
   }
   if (page === 'alert-feed') {
     const farms = Array.isArray(pageCtx) ? pageCtx : (pageCtx ? [pageCtx] : [])

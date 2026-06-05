@@ -45,25 +45,26 @@ async function call(path, options = {}) {
 
 // ── Normalise helpers ──────────────────────────────────────────────────
 export function normaliseCurrentWeather(raw) {
+  const c = raw?.current ?? raw
   return {
-    temperature: raw.temperature  ?? raw.temp      ?? raw.temp_c          ?? raw.current?.temp_c       ?? null,
-    condition:   raw.condition    ?? raw.description ?? raw.weather        ?? raw.current?.condition?.text ?? '',
-    humidity:    raw.humidity     ?? raw.humidity_pct ?? raw.current?.humidity ?? null,
-    wind_speed:  raw.wind_speed   ?? raw.wind_kph  ?? raw.current?.wind_kph   ?? null,
-    uv_index:    raw.uv_index     ?? raw.uv        ?? raw.current?.uv          ?? null,
-    feels_like:  raw.feels_like   ?? raw.feelslike_c ?? raw.current?.feelslike_c ?? null,
+    temperature: c.temperature  ?? c.temp      ?? c.temp_c    ?? null,
+    condition:   c.condition    ?? c.condition_code ?? c.description ?? c.weather ?? '',
+    humidity:    c.humidity     ?? raw?.hourly?.[0]?.humidity  ?? null,
+    wind_speed:  c.wind_speed   ?? c.wind_kph  ?? null,
+    uv_index:    c.uv_index     ?? raw?.hourly?.[0]?.uv_index  ?? null,
+    feels_like:  c.feels_like   ?? raw?.hourly?.[0]?.feels_like ?? null,
   }
 }
 
 export function normaliseDailyForecast(raw) {
-  const arr = raw?.forecast ?? raw?.daily ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
+  const arr = raw?.daily ?? raw?.forecast ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
   return arr.map((d, i) => ({
-    day:              d.day   ?? new Date(Date.now() + i * 86400000).toLocaleDateString('en-KE', { weekday: 'short' }),
+    day:              d.day   ?? new Date(d.date ?? Date.now() + i * 86400000).toLocaleDateString('en-KE', { weekday: 'short' }),
     date:             d.date  ?? new Date(Date.now() + i * 86400000).toLocaleDateString('en-KE', { month: 'short', day: 'numeric' }),
-    high:             d.high  ?? d.maxtemp_c ?? d.max_temp ?? d.temp_max ?? null,
-    low:              d.low   ?? d.mintemp_c ?? d.min_temp ?? d.temp_min ?? null,
-    rain_probability: d.rain_probability ?? d.daily_chance_of_rain ?? d.pop ?? d.precipitation_probability ?? null,
-    condition:        d.condition ?? d.description ?? d.day?.condition?.text ?? '',
+    high:             d.high  ?? d.temp_max  ?? d.maxtemp_c ?? null,
+    low:              d.low   ?? d.temp_min  ?? d.mintemp_c ?? null,
+    rain_probability: d.rain_probability ?? d.precipitation_probability ?? d.daily_chance_of_rain ?? d.pop ?? null,
+    condition:        d.condition ?? d.condition_code ?? d.description ?? '',
   }))
 }
 
@@ -72,8 +73,8 @@ export function normaliseHourlyForecast(raw) {
   return arr.slice(0, 24).map((h, i) => ({
     hour:             h.hour ?? h.time ?? `${String(i).padStart(2, '0')}:00`,
     temperature:      h.temperature ?? h.temp_c ?? h.temp ?? null,
-    rain_probability: h.rain_probability ?? h.chance_of_rain ?? h.pop ?? null,
-    condition:        h.condition ?? h.description ?? '',
+    rain_probability: h.rain_probability ?? h.precipitation_probability ?? h.chance_of_rain ?? h.pop ?? null,
+    condition:        h.condition ?? h.condition_code ?? h.description ?? '',
   }))
 }
 
@@ -98,22 +99,22 @@ export function normaliseUsage(raw) {
 
 // ── Public API ─────────────────────────────────────────────────────────
 export async function getCurrentWeather(lat, lng) {
-  const raw = await call(`/v1/current?lat=${lat}&lng=${lng}`)
+  const raw = await call(`/v1/current?lat=${lat}&lon=${lng}`)
   return normaliseCurrentWeather(raw)
 }
 
 export async function getWeatherGeo(lat, lng) {
-  const raw = await call(`/v1/weather-geo?lat=${lat}&lng=${lng}`)
+  const raw = await call(`/v1/weather-geo?lat=${lat}&lon=${lng}`)
   return normaliseCurrentWeather(raw)
 }
 
 export async function getDailyForecast(lat, lng) {
-  const raw = await call(`/v1/daily?lat=${lat}&lng=${lng}`)
+  const raw = await call(`/v1/daily?lat=${lat}&lon=${lng}`)
   return normaliseDailyForecast(raw)
 }
 
 export async function getHourlyForecast(lat, lng) {
-  const raw = await call(`/v1/hourly?lat=${lat}&lng=${lng}`)
+  const raw = await call(`/v1/hourly?lat=${lat}&lon=${lng}`)
   return normaliseHourlyForecast(raw)
 }
 
@@ -130,18 +131,30 @@ export async function analyzeTree(formData) {
   } catch {
     throw new NetworkError('Network error — check your connection and try again.')
   }
-  if (!res.ok) throw new NetworkError(`Network error — ${res.status}: ${res.statusText}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    if (res.status === 403 && body?.error) throw new PlanError(body.error)
+    throw new NetworkError(`Network error — ${res.status}: ${res.statusText}`)
+  }
   consumeApiCall()
-  const raw = await res.json()
+  const r = await res.json()
   return {
-    tree_count:  raw.tree_count  ?? raw.trees ?? 0,
-    overlay_url: raw.overlay_url ?? raw.annotated_url ?? raw.image_url ?? null,
+    analysis_id:      r.analysis_id      ?? null,
+    tree_count:       r.total_tree_count ?? r.tree_count ?? 0,
+    density_per_acre: r.tree_density_per_acre ?? null,
+    confidence:       r.confidence_score ?? null,
+    canopy_coverage:  r.canopy_coverage_pct ?? null,
+    species_guess:    r.tree_species_guess ?? null,
+    overlay_url:      r.overlay_image_url  ?? r.overlay_url ?? r.annotated_url ?? null,
+    original_url:     r.original_image_url ?? null,
     canopy: {
-      healthy:           raw.canopy?.healthy            ?? raw.healthy_pct            ?? null,
-      needs_care:        raw.canopy?.needs_care         ?? raw.needs_care_pct         ?? null,
-      needs_replacement: raw.canopy?.needs_replacement  ?? raw.needs_replacement_pct  ?? null,
+      healthy:           r.tree_health?.healthy           ?? r.canopy?.healthy           ?? null,
+      needs_care:        r.tree_health?.needs_care        ?? r.canopy?.needs_care        ?? null,
+      needs_replacement: r.tree_health?.needs_replacement ?? r.canopy?.needs_replacement ?? null,
     },
-    analyzed_at: raw.analyzed_at ?? raw.created_at ?? new Date().toISOString(),
+    observations:    r.observations    ?? [],
+    recommendations: r.recommendations ?? [],
+    analyzed_at:     r.timestamp ?? r.analyzed_at ?? new Date().toISOString(),
   }
 }
 
@@ -163,7 +176,7 @@ export async function getTreeHistory() {
 }
 
 export async function getInsights(lat, lng, crop) {
-  const raw = await call(`/v1/insights?lat=${lat}&lng=${lng}&crop=${encodeURIComponent(crop)}`)
+  const raw = await call(`/v1/insights?lat=${lat}&lon=${lng}&crop=${encodeURIComponent(crop)}`)
   return normaliseInsights(raw)
 }
 

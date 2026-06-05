@@ -213,7 +213,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const safeCount  = farms.filter(f => riskLevel(f.weather) === 'safe').length
   const watchCount = farms.filter(f => riskLevel(f.weather) === 'watch').length
   const actCount   = farms.filter(f => riskLevel(f.weather) === 'act').length
-  const NAV_PAGES  = ['Dashboard', 'Farm Detail', 'Tree Analysis', 'Alert Feed']
+  const NAV_PAGES  = ['Dashboard', 'Alert Feed']
 
   return (
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg,#071510 0%,#0d2318 40%,#071510 100%)' }}>
@@ -289,8 +289,8 @@ export default function Dashboard({ onLogout, onNavigate }) {
                     style={{ background: 'radial-gradient(circle,rgba(168,214,107,0.15),transparent)' }}>🌱</div>
                   <div className="absolute inset-0 rounded-full animate-ping opacity-10" style={{ background: '#a8d66b' }} />
                 </div>
-                <h2 className="text-xl font-extrabold text-white mb-2">No farms yet</h2>
-                <p className="text-white/40 text-sm mb-8 max-w-xs leading-relaxed">Add your first farm to start monitoring live weather, crop health, and risk alerts.</p>
+                <h2 className="text-xl font-extrabold text-white mb-2">Your fields are waiting 🌱</h2>
+                <p className="text-white/40 text-sm mb-8 max-w-xs leading-relaxed">Every great harvest starts with knowing your land. Add your first farm and let FarmPulse watch the weather, so you don't have to.</p>
                 <button onClick={() => setShowModal(true)}
                   className="flex items-center gap-2 bg-[#a8d66b] hover:bg-[#96c45a] text-[#1a3c2e] font-bold px-8 py-3.5 rounded-2xl text-sm transition-all hover:shadow-xl hover:shadow-[#a8d66b]/25 active:scale-95">
                   + Add your first farm
@@ -310,9 +310,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Quick Access</p>
               {[
-                { icon: '📊', label: 'Farm Detail',   desc: '7-day forecast & hourly' },
-                { icon: '🌳', label: 'Tree Analysis', desc: 'Drone canopy health' },
-                { icon: '⚠️', label: 'Alert Feed',    desc: 'AI agronomic risk flags' },
+                { icon: '⚠️', label: 'Alert Feed', desc: 'AI agronomic risk flags' },
               ].map(({ icon, label, desc }) => (
                 <button key={label} onClick={() => onNavigate(label, farms)}
                   className="w-full flex items-center gap-3 text-left mb-2 last:mb-0 hover:bg-white/8 rounded-xl px-2 py-2 transition-colors group">
