@@ -51,12 +51,8 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
     setError(null)
     setIsPlanError(false)
     try {
-      const [d, h] = await Promise.all([
-        getDailyForecast(farm.lat, farm.lng)
-          .catch(() => getDailyForecast(farm.lat, farm.lng)),
-        getHourlyForecast(farm.lat, farm.lng)
-          .catch(() => getHourlyForecast(farm.lat, farm.lng)),
-      ])
+      const d = await getDailyForecast(farm.lat, farm.lng)
+      const h = await getHourlyForecast(farm.lat, farm.lng)
       setDaily(d)
       setHourly(h)
     } catch (e) {
