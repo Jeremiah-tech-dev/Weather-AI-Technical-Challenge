@@ -1,5 +1,7 @@
 # 🌿 FarmPulse — AI-Powered Farm Intelligence Platform
 
+🔗 **Live Demo:** [https://weather-ai-technical-challenge.vercel.app](https://weather-ai-technical-challenge.vercel.app)
+
 FarmPulse is a real-time farm monitoring dashboard built on top of the [Weather-AI API](https://weather-ai.co/docs). It gives agronomists and farmers a single, unified view of all their farms — live weather conditions, 7-day forecasts, hourly breakdowns, and AI-generated agronomic risk alerts.
 
 Built as a technical assessment submission for **Weather-AI**.
@@ -121,6 +123,8 @@ npm run preview
 ---
 
 ## ☁️ Deployment
+
+✅ **Live on Vercel:** [https://weather-ai-technical-challenge.vercel.app](https://weather-ai-technical-challenge.vercel.app)
 
 The app is a fully static React SPA — deploy the `dist/` output to any platform:
 

@@ -95,10 +95,10 @@ function App() {
               <span className="text-[#a8d66b] text-xs font-bold tracking-widest uppercase">About FarmPulse</span>
               <h2 className="text-3xl font-extrabold mt-2 mb-4 leading-tight">Built for the Modern Agronomist</h2>
               <p className="text-white/70 text-sm leading-relaxed mb-6">
-                FarmPulse is an AI-powered farm intelligence platform designed for agronomists managing multiple sites across diverse climates worldwide. We unify real-time weather, crop health, and risk data into one seamless dashboard.
+                FarmPulse is a <span className="text-[#a8d66b] font-semibold">Weather-AI powered</span> farm intelligence platform built for agronomists managing multiple farms across diverse climates. We consume Weather-AI's live weather, forecast, and agronomic insight APIs to deliver real-time conditions, 7-day forecasts, hourly breakdowns, and AI-generated risk alerts — all in one seamless dashboard.
               </p>
               <p className="text-white/70 text-sm leading-relaxed mb-8">
-                Founded by a team of agronomists and engineers, our mission is simple: give farmers the power to act before problems strike. From hyperlocal forecasts to drone-based canopy analysis, FarmPulse is your farm's smartest tool.
+                Our mission is simple: give farmers the power to act before problems strike. Powered entirely by the <span className="text-[#a8d66b] font-semibold">Weather-AI REST API</span>, FarmPulse translates raw weather data into clear, actionable intelligence — so every farmer, regardless of scale, can make smarter decisions every single day.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {[['500+', 'Farms Monitored'], ['20k+', 'Happy Clients'], ['98%', 'Uptime'], ['7-Day', 'Forecasts']].map(([val, lbl]) => (
