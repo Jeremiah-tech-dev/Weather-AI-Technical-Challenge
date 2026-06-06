@@ -11,6 +11,32 @@ Built as a technical assessment submission for **Weather-AI**.
 
 ---
 
+## 🖥️ Trying the Live Demo
+
+No setup needed — everything runs in your browser. Here's how to get the full experience in under a minute:
+
+**1. Open the live link**
+Head to [https://weather-ai-technical-challenge.vercel.app](https://weather-ai-technical-challenge.vercel.app). You'll be greeted by an animated splash screen — let it finish and it will take you to the landing page.
+
+**2. Create your account**
+Click **Register Account**. Enter any name, a phone number, and a password of your choice. Your password is hashed with bcrypt in the browser before being stored — plain text is never saved anywhere.
+
+**3. Add your first farm**
+Once on the dashboard, click **+ Add Farm**. Fill in the farm name, crop type, and region. On the next step, click **📡 Get My Location** — your browser will ask for location permission, click **Allow**. Your GPS coordinates will be captured and the farm will be saved.
+
+**4. Explore the dashboard**
+Your farm card will appear with live weather data — temperature, humidity, wind speed, and a risk badge (Safe / Watch / Act Now). Click **View details →** on any card to open the 7-day forecast chart, then click **⏱️ Load Hourly Forecast** to see the hour-by-hour breakdown.
+
+**5. Check the Alert Feed**
+Click **Alert Feed** in the navigation to view AI-generated agronomic risk flags across all your farms, filterable by severity.
+
+**6. View your API quota**
+Back on the dashboard sidebar, click **📊 View Quota Usage** to open a donut chart showing your Weather-AI AI call usage for the month.
+
+> 💡 Each action loads data on demand — nothing auto-fires in the background. This is intentional to stay within the free tier API limits and give you a smooth, error-free experience.
+
+---
+
 ## ✨ Features
 
 - **Animated Splash Screen** — Particle-based canvas logo animation on first load
@@ -42,25 +68,36 @@ Built as a technical assessment submission for **Weather-AI**.
 ## 📁 Project Structure
 
 ```
-api/
-└── proxy.js                 # Vercel serverless proxy — forwards all GET requests to Weather-AI (bypasses CORS)
-src/
-├── components/
-│   ├── SplashScreen.jsx     # Canvas particle animation intro
-│   └── AddFarmModal.jsx     # 3-step modal: details → GPS → confirm
-├── pages/
-│   ├── AuthPage.jsx         # Register / Login
-│   ├── Dashboard.jsx        # Farm overview with live weather cards
-│   ├── FarmDetail.jsx       # 7-day + hourly forecast charts
-└─── AlertFeed.jsx        # AI agronomic risk alerts
-├── services/
-│   └── weatherApi.js        # All Weather-AI API calls + response normalisers
-├── store/
-│   └── farmStore.js         # localStorage user store + in-memory session + budget enforcement
-├── App.jsx                  # Root component + manual client-side routing
-├── App.css                  # Animation keyframes + modal transition styles
-├── index.css                # Global styles + Tailwind CSS import
-└── main.jsx                 # React entry point
+Weather-AI-Technical-Challenge/
+├── api/
+│   └── proxy.js                 # Vercel serverless proxy — forwards all requests to Weather-AI (bypasses CORS, keeps API key server-side)
+├── public/
+│   ├── favicon.svg              # App favicon
+│   └── icons.svg                # SVG icon assets
+├── src/
+│   ├── components/
+│   │   ├── SplashScreen.jsx     # Canvas particle animation intro
+│   │   └── AddFarmModal.jsx     # 3-step modal: details → GPS → confirm
+│   ├── pages/
+│   │   ├── AuthPage.jsx         # Register / Login
+│   │   ├── Dashboard.jsx        # Farm overview with live weather cards
+│   │   ├── FarmDetail.jsx       # 7-day forecast + on-demand hourly chart
+│   │   └── AlertFeed.jsx        # AI agronomic risk alerts
+│   ├── services/
+│   │   └── weatherApi.js        # All Weather-AI API calls + response normalisers + request queue
+│   ├── store/
+│   │   └── farmStore.js         # localStorage user store + in-memory session + budget enforcement
+│   ├── App.jsx              # Root component + manual client-side routing
+│   ├── App.css              # Animation keyframes + modal transition styles
+│   ├── index.css            # Global styles + Tailwind CSS import
+│   └── main.jsx             # React entry point
+├── .env.example             # Environment variable template
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json
+├── vercel.json              # Vercel routing config — API functions + SPA fallback
+└── vite.config.js
 ```
 
 ---
