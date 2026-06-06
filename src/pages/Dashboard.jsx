@@ -331,7 +331,7 @@ export default function Dashboard({ onLogout, onNavigate }) {
   const safeCount  = farms.filter(f => riskLevel(f.weather) === 'safe').length
   const watchCount = farms.filter(f => riskLevel(f.weather) === 'watch').length
   const actCount   = farms.filter(f => riskLevel(f.weather) === 'act').length
-  const NAV_PAGES = ['Dashboard', 'Alert Feed']
+  const NAV_PAGES = ['Dashboard']
 
   return (
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(160deg,#071510 0%,#0d2318 40%,#071510 100%)' }}>
@@ -346,10 +346,8 @@ export default function Dashboard({ onLogout, onNavigate }) {
           </div>
           <div className="hidden md:flex items-center gap-1">
             {NAV_PAGES.map(p => (
-              <button key={p} onClick={() => p !== 'Dashboard' && onNavigate(p, farms)}
-                className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
-                  p === 'Dashboard' ? 'text-[#a8d66b] font-semibold bg-[#a8d66b]/10' : 'text-white/40 hover:text-white hover:bg-white/8'
-                }`}>{p}</button>
+              <button key={p} onClick={() => {}}
+                className="px-4 py-1.5 rounded-full text-sm transition-colors text-[#a8d66b] font-semibold bg-[#a8d66b]/10">{p}</button>
             ))}
           </div>
           <div className="flex items-center gap-4">
@@ -425,21 +423,6 @@ export default function Dashboard({ onLogout, onNavigate }) {
 
           <div className="lg:w-72 shrink-0 space-y-4" style={{ animation: 'fadeSlideUp 0.5s ease-out 0.2s both' }}>
             <ApiUsageBar onOpen={() => { loadQuota(); setShowQuota(true) }} />
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Quick Access</p>
-              {[
-                { icon: '⚠️', label: 'Alert Feed', desc: 'AI agronomic risk flags' },
-              ].map(({ icon, label, desc }) => (
-                <button key={label} onClick={() => onNavigate(label, farms)}
-                  className="w-full flex items-center gap-3 text-left mb-2 last:mb-0 hover:bg-white/8 rounded-xl px-2 py-2 transition-colors group">
-                  <span className="text-lg">{icon}</span>
-                  <div>
-                    <p className="text-white text-xs font-semibold group-hover:text-[#a8d66b] transition-colors">{label}</p>
-                    <p className="text-white/30 text-[10px]">{desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-3">Risk Guide</p>
               {[{ color: '#10b981', label: 'Safe', desc: 'Conditions normal' }, { color: '#f59e0b', label: 'Watch', desc: 'Monitor closely' }, { color: '#ef4444', label: 'Act Now', desc: 'Immediate action needed' }].map(({ color, label, desc }) => (

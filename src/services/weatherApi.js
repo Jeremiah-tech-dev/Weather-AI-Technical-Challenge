@@ -108,18 +108,6 @@ export function normaliseHourlyForecast(raw) {
   }))
 }
 
-export function normaliseInsights(raw) {
-  const arr = raw?.insights ?? raw?.alerts ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
-  return arr.map((a, i) => ({
-    id:        a.id        ?? i + 1,
-    severity:  a.severity  ?? a.level ?? 'medium',
-    icon:      a.icon      ?? { high: '🚨', medium: '⚠️', low: 'ℹ️' }[a.severity ?? 'medium'],
-    title:     a.title     ?? a.name ?? a.summary ?? 'Advisory',
-    body:      a.body      ?? a.description ?? a.message ?? a.detail ?? '',
-    timestamp: a.timestamp ?? a.created_at ?? new Date().toISOString(),
-  }))
-}
-
 export function normaliseUsage(raw) {
   const limit       = raw?.limits?.requests
   const remaining   = raw?.remaining?.requests
@@ -160,11 +148,6 @@ export async function getHourlyForecast(lat, lng) {
   const [la, ln] = validCoords(lat, lng)
   const raw = await call(`/v1/hourly?lat=${la}&lon=${ln}`)
   return normaliseHourlyForecast(raw)
-}
-
-export async function getInsights(lat, lng, crop) {
-  const raw = await call(`/v1/insights?lat=${lat}&lon=${lng}&crop=${encodeURIComponent(crop)}&ai=false`)
-  return normaliseInsights(raw)
 }
 
 export async function getUsage() {

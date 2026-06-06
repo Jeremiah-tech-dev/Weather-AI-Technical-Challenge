@@ -4,7 +4,6 @@ import { getSession } from './store/farmStore'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
 import FarmDetail from './pages/FarmDetail'
-import AlertFeed from './pages/AlertFeed'
 import SplashScreen from './components/SplashScreen'
 
 const avatars = [
@@ -73,10 +72,6 @@ function App() {
   }
   if (page === 'farm-detail') {
     return <FarmDetail farm={pageCtx} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
-  }
-  if (page === 'alert-feed') {
-    const farms = Array.isArray(pageCtx) ? pageCtx : (pageCtx ? [pageCtx] : [])
-    return <AlertFeed farms={farms} onBack={() => setPage('dashboard')} onBudgetError={msg => { setBudgetWarning(msg); setPage('dashboard') }} />
   }
   // else: fall through to landing page below
 
