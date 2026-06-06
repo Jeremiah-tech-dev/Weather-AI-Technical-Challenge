@@ -65,19 +65,23 @@ export default function FarmDetail({ farm, onBack, onBudgetError }) {
     }
   }
 
-  // Load hourly only when user explicitly requests it
+  // Load hourly only when user explicitly requests it — auto-retries once on timeout
   async function loadHourly() {
     setHourlyLoading(true)
     setHourlyError(null)
-    try {
-      const h = await getHourlyForecast(farm.lat, farm.lng)
-      setHourly(h)
-    } catch (e) {
-      if (e instanceof BudgetError) { onBudgetError(e.message); return }
-      setHourlyError(e instanceof NetworkError ? e.message : 'Could not load hourly data.')
-    } finally {
-      setHourlyLoading(false)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const h = await getHourlyForecast(farm.lat, farm.lng)
+        setHourly(h)
+        setHourlyLoading(false)
+        return
+      } catch (e) {
+        if (e instanceof BudgetError) { onBudgetError(e.message); setHourlyLoading(false); return }
+        if (attempt === 0 && e instanceof NetworkError) { await new Promise(r => setTimeout(r, 2000)); continue }
+        setHourlyError(e instanceof NetworkError ? e.message : 'Could not load hourly data.')
+      }
     }
+    setHourlyLoading(false)
   }
 
   useEffect(() => { loadDaily() }, [farm.id]) // eslint-disable-line

@@ -287,11 +287,22 @@ export default function Dashboard({ onLogout, onNavigate }) {
   }
 
   async function retryWeather(farm) {
-    setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, error: null } : f))
-    const weather = await fetchWeather(farm)
-    setFarms(prev => prev.map(f =>
-      f.id === farm.id ? { ...f, weather: weather ?? null, error: weather ? null : 'error' } : f
-    ))
+    // Clear error and weather so the card shows the loading spinner
+    setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, weather: null, error: null } : f))
+    const { allowed, reason } = checkBudget()
+    if (!allowed) {
+      showToast(reason, 'budget')
+      setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, error: 'budget' } : f))
+      return
+    }
+    try {
+      const data = await getCurrentWeather(farm.lat, farm.lng)
+      setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, weather: data, error: null } : f))
+    } catch (e) {
+      if (e instanceof BudgetError || e instanceof PlanError) showToast(e.message, 'budget')
+      else showToast(e.message ?? 'Network error — could not fetch weather.', 'network')
+      setFarms(prev => prev.map(f => f.id === farm.id ? { ...f, error: 'Network error' } : f))
+    }
   }
 
   useEffect(() => {
